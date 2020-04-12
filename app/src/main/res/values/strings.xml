@@ -4,5 +4,6 @@
 
 	<string name="menu_use_seekbar">use seekbar</string>
 	<string name="menu_about">about</string>
+	<string name="title_activity_user_status">UserStatusActivity</string>
 
 </resources>

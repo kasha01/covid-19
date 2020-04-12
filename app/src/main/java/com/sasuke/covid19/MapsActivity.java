@@ -40,7 +40,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 		toolbar.setNavigationOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
-				// todo open user activity
+				Intent intent = new Intent(MapsActivity.this, UserStatusActivity.class);
+				startActivity(intent);
 			}
 		});
 
