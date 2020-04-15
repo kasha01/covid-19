@@ -1,5 +1,8 @@
 package com.sasuke.covid19;
 
+import android.animation.Animator;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
@@ -20,20 +23,36 @@ public class UserStatusActivity extends AppCompatActivity {
 		Toolbar toolbar = findViewById(R.id.toolbar);
 		setSupportActionBar(toolbar);
 
-		CompoundTextView statusCtv = findViewById(R.id.user_status_ctv_status);
-		CompoundTextView notTestedCtv = findViewById(R.id.user_status_ctv_not_tested);
-		CompoundTextView testedNegCtv = findViewById(R.id.user_status_ctv_tested_neg);
-		CompoundTextView testedPosCtv = findViewById(R.id.user_status_ctv_tested_pos);
+		final CompoundTextView statusCtv = findViewById(R.id.user_status_ctv_status);
+		final CompoundTextView notTestedCtv = findViewById(R.id.user_status_ctv_not_tested);
+		final CompoundTextView testedNegCtv = findViewById(R.id.user_status_ctv_tested_neg);
+		final CompoundTextView testedPosCtv = findViewById(R.id.user_status_ctv_tested_pos);
 
 		setCompoundTextView(statusCtv, "NOT TESTED", "current status");
 		setCompoundTextView(notTestedCtv, "NOT TESTED", "");
 		setCompoundTextView(testedNegCtv, "NEGATIVE", "TESTED");
 		setCompoundTextView(testedPosCtv, "POSITIVE", "TESTED");
 
+		notTestedCtv.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				getNotTestedCtvAnimator(notTestedCtv, testedNegCtv, testedPosCtv).start();
+				notTestedCtv.setClickable(false);
+				statusCtv.setPrimaryText(notTestedCtv.getPrimaryText());
+			}
+		});
+
 		testedNegCtv.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
-				Toast.makeText(getBaseContext(), "click", Toast.LENGTH_LONG).show();
+				Toast.makeText(getBaseContext(), "click -ve", Toast.LENGTH_LONG).show();
+			}
+		});
+
+		testedPosCtv.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				Toast.makeText(getBaseContext(), "click +ve", Toast.LENGTH_LONG).show();
 			}
 		});
 
@@ -52,5 +71,49 @@ public class UserStatusActivity extends AppCompatActivity {
 	private void setCompoundTextView(CompoundTextView compoundTextView, String primary, String secondary) {
 		compoundTextView.setPrimaryText(primary);
 		compoundTextView.setSecondaryText(secondary);
+	}
+
+	private AnimatorSet getNotTestedCtvAnimator(final CompoundTextView notTestedCtv,
+	                                            CompoundTextView testedNegCtv, CompoundTextView testedPosCtv) {
+
+		ObjectAnimator animation = ObjectAnimator.ofFloat(notTestedCtv, "translationX", 1000f);
+		animation.setDuration(500);
+
+		ObjectAnimator animatorUpNeg = ObjectAnimator.ofFloat(testedNegCtv, "translationY",
+				getResources().getDimensionPixelSize(R.dimen.animationTransitionY));
+
+		ObjectAnimator animatorUpPos = ObjectAnimator.ofFloat(testedPosCtv, "translationY",
+				getResources().getDimensionPixelSize(R.dimen.animationTransitionY));
+
+		// property animation
+		final AnimatorSet animatorSet = new AnimatorSet();
+		animatorSet.play(animation);
+		animatorSet.play(animatorUpNeg).with(animation);
+		animatorSet.play(animatorUpPos).with(animation);
+		//animation.start();
+
+		animatorSet.addListener(new Animator.AnimatorListener() {
+			@Override
+			public void onAnimationStart(Animator animator) {
+
+			}
+
+			@Override
+			public void onAnimationEnd(Animator animator) {
+				notTestedCtv.setVisibility(View.INVISIBLE);
+			}
+
+			@Override
+			public void onAnimationCancel(Animator animator) {
+
+			}
+
+			@Override
+			public void onAnimationRepeat(Animator animator) {
+
+			}
+		});
+
+		return animatorSet;
 	}
 }

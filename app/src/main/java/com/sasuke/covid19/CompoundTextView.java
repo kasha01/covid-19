@@ -25,12 +25,16 @@ public class CompoundTextView extends FrameLayout {
 		this(context, null);
 	}
 
-	public void setPrimaryText(String text) {
-		primaryTextView.setText(text);
-	}
-
 	public void setSecondaryText(String text) {
 		secondaryTextView.setText(text);
+	}
+
+	public String getPrimaryText() {
+		return primaryTextView.getText().toString();
+	}
+
+	public void setPrimaryText(String text) {
+		primaryTextView.setText(text);
 	}
 
 	public void setColor(int color) {
