@@ -18,14 +18,6 @@
 		android:layout_marginBottom="100dp" />
 
 	<com.sasuke.covid19.CompoundTextView
-		android:id="@+id/user_status_ctv_not_tested"
-		android:layout_width="250dp"
-		android:layout_height="60dp"
-		android:layout_gravity="center_horizontal"
-		android:layout_marginBottom="60dp"
-		android:background="@drawable/shape_rounded_cornors" />
-
-	<com.sasuke.covid19.CompoundTextView
 		android:id="@+id/user_status_ctv_tested_neg"
 		android:layout_width="250dp"
 		android:layout_height="60dp"
@@ -38,6 +30,15 @@
 		android:layout_width="250dp"
 		android:layout_height="60dp"
 		android:layout_gravity="center_horizontal"
+		android:layout_marginBottom="60dp"
 		android:background="@drawable/shape_rounded_cornors" />
+
+	<com.sasuke.covid19.CompoundTextView
+		android:id="@+id/user_status_ctv_recovered"
+		android:layout_width="250dp"
+		android:layout_height="60dp"
+		android:layout_gravity="center_horizontal"
+		android:background="@drawable/shape_rounded_cornors"
+		android:visibility="gone" />
 
 </LinearLayout>
