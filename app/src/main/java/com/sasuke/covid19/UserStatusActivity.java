@@ -18,7 +18,6 @@ import com.sasuke.covid19.util.StatusUtil;
 public class UserStatusActivity extends AppCompatActivity {
 
 	private static final String _STATUS_REF_KEY = "STATUS";
-	private int status;
 	private SharedPreferences preferences;
 
 	@Override
@@ -30,9 +29,7 @@ public class UserStatusActivity extends AppCompatActivity {
 
 		preferences = getPreferences(MODE_PRIVATE);
 
-		//status = preferences.getInt(_STATUS_REF_KEY, StatusUtil.Status.NotTested.ordinal());
-		status = 0;
-		String statusLiteral = StatusUtil.ToStatusLiteral(status);
+		String statusLiteral = StatusUtil.ToStatusLiteral(getStatusPreferenceValue());
 
 		final CompoundTextView statusCtv = findViewById(R.id.user_status_ctv_status);
 		final CompoundTextView testedNegCtv = findViewById(R.id.user_status_ctv_tested_neg);
@@ -56,7 +53,7 @@ public class UserStatusActivity extends AppCompatActivity {
 		testedPosCtv.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
-				if (status == StatusUtil.Status.NotTested.ordinal()) {
+				if (getStatusPreferenceValue() == StatusUtil.Status.NotTested.ordinal()) {
 					getTestedNegativeAndPositiveCtvAnimator(testedNegCtv, testedPosCtv, recoveredCtv).start();
 				} else {
 					getTestedPositiveCtvAnimator(testedPosCtv, recoveredCtv).start();
@@ -223,6 +220,10 @@ public class UserStatusActivity extends AppCompatActivity {
 		});
 
 		return animatorSet;
+	}
+
+	private int getStatusPreferenceValue() {
+		return preferences.getInt(_STATUS_REF_KEY, StatusUtil.Status.NotTested.ordinal());
 	}
 
 	private void setStatusPreferenceValue(StatusUtil.Status status) {
