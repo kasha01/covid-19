@@ -4,6 +4,7 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
+	android:animateLayoutChanges="true"
 	android:orientation="vertical"
 	app:layout_behavior="@string/appbar_scrolling_view_behavior"
 	tools:context=".UserStatusActivity"
@@ -39,6 +40,6 @@
 		android:layout_height="60dp"
 		android:layout_gravity="center_horizontal"
 		android:background="@drawable/shape_rounded_cornors"
-		android:visibility="gone" />
+		android:visibility="visible" />
 
 </LinearLayout>

@@ -29,7 +29,9 @@ public class UserStatusActivity extends AppCompatActivity {
 
 		preferences = getPreferences(MODE_PRIVATE);
 
-		String statusLiteral = StatusUtil.ToStatusLiteral(getStatusPreferenceValue());
+		//final int status = getStatusPreferenceValue();
+		final int status = 0;
+		String statusLiteral = StatusUtil.ToStatusLiteral(status);
 
 		final CompoundTextView statusCtv = findViewById(R.id.user_status_ctv_status);
 		final CompoundTextView testedNegCtv = findViewById(R.id.user_status_ctv_tested_neg);
@@ -87,11 +89,11 @@ public class UserStatusActivity extends AppCompatActivity {
 		ObjectAnimator animation = getTransitionXAnimation(testedNegCtv);
 		animation.setDuration(500);
 
-		ObjectAnimator animatorUpPos = getTransitionYAnimation(testedPosCtv);
+		//ObjectAnimator animatorUpPos = getTransitionYAnimation(testedPosCtv);
 
 		final AnimatorSet animatorSet = new AnimatorSet();
 		animatorSet.play(animation);
-		animatorSet.play(animatorUpPos).with(animation);
+		//animatorSet.play(animatorUpPos).with(animation);
 
 		animatorSet.addListener(new Animator.AnimatorListener() {
 			@Override
@@ -101,7 +103,7 @@ public class UserStatusActivity extends AppCompatActivity {
 
 			@Override
 			public void onAnimationEnd(Animator animator) {
-				testedNegCtv.setVisibility(View.INVISIBLE);
+				testedNegCtv.setVisibility(View.GONE);
 				testedNegCtv.setClickable(false);
 			}
 
@@ -130,14 +132,14 @@ public class UserStatusActivity extends AppCompatActivity {
 
 		ObjectAnimator animatorScaleXRecovered = getScaleXAnimation(recoveredCtv);
 		ObjectAnimator animatorScaleYRecovered = getScaleYAnimation(recoveredCtv);
-		ObjectAnimator animatorUpRecovered = getTransitionYAnimationDoubleStep(recoveredCtv);
+		//ObjectAnimator animatorUpRecovered = getTransitionYAnimationDoubleStep(recoveredCtv);
 
 		// property animation
 		final AnimatorSet animatorSet = new AnimatorSet();
 		animatorSet.play(animation);
 		animatorSet.play(animatorScaleXRecovered).with(animation);
 		animatorSet.play(animatorScaleYRecovered).with(animation);
-		animatorSet.play(animatorUpRecovered).with(animation);
+		//animatorSet.play(animatorUpRecovered).with(animation);
 
 		animatorSet.addListener(new Animator.AnimatorListener() {
 			@Override
@@ -147,7 +149,7 @@ public class UserStatusActivity extends AppCompatActivity {
 
 			@Override
 			public void onAnimationEnd(Animator animator) {
-				testedPosCtv.setVisibility(View.INVISIBLE);
+				testedPosCtv.setVisibility(View.GONE);
 				testedPosCtv.setClickable(false);
 			}
 
@@ -172,11 +174,11 @@ public class UserStatusActivity extends AppCompatActivity {
 		ObjectAnimator animatorRightNeg = getTransitionXAnimation(testedNegCtv);
 		animatorRightNeg.setDuration(500);
 
-		ObjectAnimator animatorUpPos = getTransitionYAnimation(testedPosCtv);
+		//ObjectAnimator animatorUpPos = getTransitionYAnimation(testedPosCtv);
 
 		final AnimatorSet animatorSet = new AnimatorSet();
 		animatorSet.play(animatorRightNeg);
-		animatorSet.play(animatorUpPos).with(animatorRightNeg);
+		//animatorSet.play(animatorUpPos).with(animatorRightNeg);
 
 
 		ObjectAnimator animation = getTransitionXAnimation(testedPosCtv);
@@ -187,12 +189,12 @@ public class UserStatusActivity extends AppCompatActivity {
 
 		ObjectAnimator animatorScaleXRecovered = getScaleXAnimation(recoveredCtv);
 		ObjectAnimator animatorScaleYRecovered = getScaleYAnimation(recoveredCtv);
-		ObjectAnimator animatorUpRecovered = getTransitionYAnimationDoubleStep(recoveredCtv);
+		//ObjectAnimator animatorUpRecovered = getTransitionYAnimationDoubleStep(recoveredCtv);
 
 		animatorSet.play(animation).after(animatorRightNeg);
 		animatorSet.play(animatorScaleXRecovered).with(animation);
 		animatorSet.play(animatorScaleYRecovered).with(animation);
-		animatorSet.play(animatorUpRecovered).with(animation);
+		//animatorSet.play(animatorUpRecovered).with(animation);
 
 		animatorSet.addListener(new Animator.AnimatorListener() {
 			@Override
@@ -202,9 +204,9 @@ public class UserStatusActivity extends AppCompatActivity {
 
 			@Override
 			public void onAnimationEnd(Animator animator) {
-				testedNegCtv.setVisibility(View.INVISIBLE);
+				testedNegCtv.setVisibility(View.GONE);
 				testedNegCtv.setClickable(false);
-				testedPosCtv.setVisibility(View.INVISIBLE);
+				testedPosCtv.setVisibility(View.GONE);
 				testedPosCtv.setClickable(false);
 			}
 
