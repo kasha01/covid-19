@@ -4,8 +4,10 @@ import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.SharedPreferences;
+import android.graphics.drawable.Animatable;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ImageView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -32,12 +34,14 @@ public class UserStatusActivity extends AppCompatActivity {
 
 		preferences = getPreferences(MODE_PRIVATE);
 
-		final int status = getStatusPreferenceValue();
+		//final int status = getStatusPreferenceValue();
+		int status = 2;
 
 		final CompoundTextView statusCtv = findViewById(R.id.user_status_ctv_status);
 		final CompoundTextView testedNegCtv = findViewById(R.id.user_status_ctv_tested_neg);
 		final CompoundTextView testedPosCtv = findViewById(R.id.user_status_ctv_tested_pos);
 		final CompoundTextView recoveredCtv = findViewById(R.id.user_status_ctv_recovered);
+		final ImageView checkMark = findViewById(R.id.user_status_iv_animated_check);
 
 		// set UI
 		StatusStrategyFactory factory = new StatusStrategyFactory();
@@ -47,18 +51,20 @@ public class UserStatusActivity extends AppCompatActivity {
 		testedPosCtv.setVisibility(result.getTestedPositiveCtvVisibility());
 		recoveredCtv.setVisibility(result.getRecoveredCtvVisibility());
 
+		// set status ctv
 		String statusLiteral = result.getStatusLiteral();
-
+		statusCtv.setColor(ContextCompat.getColor(this, R.color.expressive));
 		setCompoundTextView(statusCtv, statusLiteral, "current status");
+
+		// set status test ctv
 		setCompoundTextView(testedNegCtv, "NEGATIVE", "TESTED");
 		setCompoundTextView(testedPosCtv, "POSITIVE", "TESTED");
 		setCompoundTextView(recoveredCtv, "RECOVERED", "");
 
-
 		testedNegCtv.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
-				getTestedNegativeCtvAnimator(testedNegCtv, testedPosCtv).start();
+				getTestedNegativeCtvAnimator(testedNegCtv).start();
 				statusCtv.setPrimaryText(testedNegCtv.getPrimaryText());
 				setStatusPreferenceValue(StatusUtil.Status.Negative);
 			}
@@ -78,8 +84,15 @@ public class UserStatusActivity extends AppCompatActivity {
 			}
 		});
 
+		recoveredCtv.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				getRecoveredCtvAnimator(recoveredCtv, checkMark).start();
 
-		statusCtv.setColor(ContextCompat.getColor(this, R.color.expressive));
+				statusCtv.setPrimaryText(recoveredCtv.getPrimaryText());
+				setStatusPreferenceValue(StatusUtil.Status.Recovered);
+			}
+		});
 
 		FloatingActionButton fab = findViewById(R.id.fab);
 		fab.setOnClickListener(new View.OnClickListener() {
@@ -96,7 +109,7 @@ public class UserStatusActivity extends AppCompatActivity {
 		compoundTextView.setSecondaryText(secondary);
 	}
 
-	private AnimatorSet getTestedNegativeCtvAnimator(final CompoundTextView testedNegCtv, CompoundTextView testedPosCtv) {
+	private AnimatorSet getTestedNegativeCtvAnimator(final CompoundTextView testedNegCtv) {
 
 		ObjectAnimator animation = getTransitionXAnimation(testedNegCtv);
 		animation.setDuration(500);
@@ -208,6 +221,40 @@ public class UserStatusActivity extends AppCompatActivity {
 				testedNegCtv.setClickable(false);
 				testedPosCtv.setVisibility(View.GONE);
 				testedPosCtv.setClickable(false);
+			}
+
+			@Override
+			public void onAnimationCancel(Animator animator) {
+
+			}
+
+			@Override
+			public void onAnimationRepeat(Animator animator) {
+
+			}
+		});
+
+		return animatorSet;
+	}
+
+	private AnimatorSet getRecoveredCtvAnimator(final CompoundTextView recoveredCtv, final ImageView checkMark) {
+
+		ObjectAnimator animation = getTransitionXAnimation(recoveredCtv);
+		animation.setDuration(500);
+
+		final AnimatorSet animatorSet = new AnimatorSet();
+		animatorSet.play(animation);
+
+		animatorSet.addListener(new Animator.AnimatorListener() {
+			@Override
+			public void onAnimationStart(Animator animator) {
+				((Animatable) checkMark.getDrawable()).start();
+			}
+
+			@Override
+			public void onAnimationEnd(Animator animator) {
+				recoveredCtv.setVisibility(View.GONE);
+				recoveredCtv.setClickable(false);
 			}
 
 			@Override

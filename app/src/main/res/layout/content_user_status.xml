@@ -39,7 +39,15 @@
 		android:layout_width="250dp"
 		android:layout_height="60dp"
 		android:layout_gravity="center_horizontal"
-		android:background="@drawable/shape_rounded_cornors"
-		android:visibility="visible" />
+		android:layout_marginBottom="60dp"
+		android:background="@drawable/shape_rounded_cornors" />
+
+	<ImageView
+		android:id="@+id/user_status_iv_animated_check"
+		android:layout_width="160dp"
+		android:layout_height="160dp"
+		android:layout_gravity="center_horizontal"
+		android:visibility="visible"
+		app:srcCompat="@drawable/animated_check" />
 
 </LinearLayout>
