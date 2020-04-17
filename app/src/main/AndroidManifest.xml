@@ -18,7 +18,16 @@
 		<activity
 			android:name=".UserStatusActivity"
 			android:label="@string/title_activity_user_status"
-			android:theme="@style/AppTheme.NoActionBar"></activity>
+			android:screenOrientation="portrait"
+			android:theme="@style/AppTheme.NoActionBar">
+
+			<intent-filter>
+				<action android:name="android.intent.action.VIEW" />
+			</intent-filter>
+
+		</activity>
+
+
 		<activity android:name=".AboutActivity" />
 		<!--
              The API key for Google Maps-based APIs is defined as a string resource.
@@ -35,10 +44,11 @@
 		<activity
 			android:name=".MapsActivity"
 			android:label="@string/title_activity_maps"
+			android:screenOrientation="portrait"
 			android:theme="@style/AppTheme.NoActionBar">
+
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
-
 				<category android:name="android.intent.category.LAUNCHER" />
 			</intent-filter>
 		</activity>

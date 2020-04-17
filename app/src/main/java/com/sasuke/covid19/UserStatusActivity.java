@@ -32,8 +32,7 @@ public class UserStatusActivity extends AppCompatActivity {
 
 		preferences = getPreferences(MODE_PRIVATE);
 
-		//final int status = getStatusPreferenceValue();
-		final int status = 0;
+		final int status = getStatusPreferenceValue();
 
 		final CompoundTextView statusCtv = findViewById(R.id.user_status_ctv_status);
 		final CompoundTextView testedNegCtv = findViewById(R.id.user_status_ctv_tested_neg);
@@ -102,11 +101,8 @@ public class UserStatusActivity extends AppCompatActivity {
 		ObjectAnimator animation = getTransitionXAnimation(testedNegCtv);
 		animation.setDuration(500);
 
-		//ObjectAnimator animatorUpPos = getTransitionYAnimation(testedPosCtv);
-
 		final AnimatorSet animatorSet = new AnimatorSet();
 		animatorSet.play(animation);
-		//animatorSet.play(animatorUpPos).with(animation);
 
 		animatorSet.addListener(new Animator.AnimatorListener() {
 			@Override
@@ -145,14 +141,11 @@ public class UserStatusActivity extends AppCompatActivity {
 
 		ObjectAnimator animatorScaleXRecovered = getScaleXAnimation(recoveredCtv);
 		ObjectAnimator animatorScaleYRecovered = getScaleYAnimation(recoveredCtv);
-		//ObjectAnimator animatorUpRecovered = getTransitionYAnimationDoubleStep(recoveredCtv);
 
-		// property animation
 		final AnimatorSet animatorSet = new AnimatorSet();
 		animatorSet.play(animation);
 		animatorSet.play(animatorScaleXRecovered).with(animation);
 		animatorSet.play(animatorScaleYRecovered).with(animation);
-		//animatorSet.play(animatorUpRecovered).with(animation);
 
 		animatorSet.addListener(new Animator.AnimatorListener() {
 			@Override
@@ -187,12 +180,8 @@ public class UserStatusActivity extends AppCompatActivity {
 		ObjectAnimator animatorRightNeg = getTransitionXAnimation(testedNegCtv);
 		animatorRightNeg.setDuration(500);
 
-		//ObjectAnimator animatorUpPos = getTransitionYAnimation(testedPosCtv);
-
 		final AnimatorSet animatorSet = new AnimatorSet();
 		animatorSet.play(animatorRightNeg);
-		//animatorSet.play(animatorUpPos).with(animatorRightNeg);
-
 
 		ObjectAnimator animation = getTransitionXAnimation(testedPosCtv);
 
@@ -202,12 +191,10 @@ public class UserStatusActivity extends AppCompatActivity {
 
 		ObjectAnimator animatorScaleXRecovered = getScaleXAnimation(recoveredCtv);
 		ObjectAnimator animatorScaleYRecovered = getScaleYAnimation(recoveredCtv);
-		//ObjectAnimator animatorUpRecovered = getTransitionYAnimationDoubleStep(recoveredCtv);
 
 		animatorSet.play(animation).after(animatorRightNeg);
 		animatorSet.play(animatorScaleXRecovered).with(animation);
 		animatorSet.play(animatorScaleYRecovered).with(animation);
-		//animatorSet.play(animatorUpRecovered).with(animation);
 
 		animatorSet.addListener(new Animator.AnimatorListener() {
 			@Override
@@ -252,14 +239,6 @@ public class UserStatusActivity extends AppCompatActivity {
 
 	private ObjectAnimator getScaleYAnimation(CompoundTextView ctv) {
 		return ObjectAnimator.ofFloat(ctv, "scaleY", 0, 1);
-	}
-
-	private ObjectAnimator getTransitionYAnimation(CompoundTextView ctv) {
-		return ObjectAnimator.ofFloat(ctv, "translationY", getResources().getDimensionPixelSize(R.dimen.animationTransitionY));
-	}
-
-	private ObjectAnimator getTransitionYAnimationDoubleStep(CompoundTextView ctv) {
-		return ObjectAnimator.ofFloat(ctv, "translationY", getResources().getDimensionPixelSize(R.dimen.animationTransitionY) * 2);
 	}
 
 	private ObjectAnimator getTransitionXAnimation(CompoundTextView ctv) {
