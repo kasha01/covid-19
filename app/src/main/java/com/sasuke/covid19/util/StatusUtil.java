@@ -2,9 +2,7 @@ package com.sasuke.covid19.util;
 
 public class StatusUtil {
 
-	public static String ToStatusLiteral(int ordinal) {
-		Status status = Status.values()[ordinal];
-
+	public static String ToStatusLiteral(Status status) {
 		switch (status) {
 			case Negative:
 			case Positive:
@@ -17,7 +15,12 @@ public class StatusUtil {
 		}
 	}
 
-	public static enum Status {
+	public static String ToStatusLiteral(int ordinal) {
+		Status status = Status.values()[ordinal];
+		return ToStatusLiteral(status);
+	}
+
+	public enum Status {
 		NotTested,
 		Negative,
 		Positive,

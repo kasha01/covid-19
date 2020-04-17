@@ -13,6 +13,9 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
+import com.sasuke.covid19.strategy.StatusStrategy;
+import com.sasuke.covid19.strategy.StatusStrategyFactory;
+import com.sasuke.covid19.strategy.StatusStrategyResult;
 import com.sasuke.covid19.util.StatusUtil;
 
 public class UserStatusActivity extends AppCompatActivity {
@@ -31,17 +34,27 @@ public class UserStatusActivity extends AppCompatActivity {
 
 		//final int status = getStatusPreferenceValue();
 		final int status = 0;
-		String statusLiteral = StatusUtil.ToStatusLiteral(status);
 
 		final CompoundTextView statusCtv = findViewById(R.id.user_status_ctv_status);
 		final CompoundTextView testedNegCtv = findViewById(R.id.user_status_ctv_tested_neg);
 		final CompoundTextView testedPosCtv = findViewById(R.id.user_status_ctv_tested_pos);
 		final CompoundTextView recoveredCtv = findViewById(R.id.user_status_ctv_recovered);
 
+		// set UI
+		StatusStrategyFactory factory = new StatusStrategyFactory();
+		StatusStrategy strategy = factory.getStrategy(StatusUtil.Status.values()[status]);
+		StatusStrategyResult result = strategy.getStatusVisiblity();
+		testedNegCtv.setVisibility(result.getTestedNegativeCtvVisibility());
+		testedPosCtv.setVisibility(result.getTestedPositiveCtvVisibility());
+		recoveredCtv.setVisibility(result.getRecoveredCtvVisibility());
+
+		String statusLiteral = result.getStatusLiteral();
+
 		setCompoundTextView(statusCtv, statusLiteral, "current status");
 		setCompoundTextView(testedNegCtv, "NEGATIVE", "TESTED");
 		setCompoundTextView(testedPosCtv, "POSITIVE", "TESTED");
 		setCompoundTextView(recoveredCtv, "RECOVERED", "");
+
 
 		testedNegCtv.setOnClickListener(new View.OnClickListener() {
 			@Override
