@@ -26,7 +26,7 @@ import java.util.Map;
 public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 	private static final String IS_USER_DATA_INIT_PREF_KEY = "_IS_USER_DATA_INIT";
-	private static final String _IS_USE_SEEK_CHECKED = "menu_item_use_seek";
+	private static final String IS_USE_SEEK_CHECKED_PREF_KEY = "_MENU_ITEM_USE_SEEK";
 
 	private GoogleMap mMap;
 
@@ -60,7 +60,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	public boolean onCreateOptionsMenu(Menu menu) {
 		getMenuInflater().inflate(R.menu.menu_maps_toolbar, menu);
 
-		boolean isChecked = getBoolPreference(_IS_USE_SEEK_CHECKED, false);
+		boolean isChecked = getBoolPreference(IS_USE_SEEK_CHECKED_PREF_KEY, false);
 		menu.getItem(0).setChecked(isChecked);
 
 		return super.onCreateOptionsMenu(menu);
@@ -73,7 +73,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 				boolean check = item.isChecked();
 				item.setChecked(!check);
 
-				setBoolPreference(_IS_USE_SEEK_CHECKED, !check);
+				setBoolPreference(IS_USE_SEEK_CHECKED_PREF_KEY, !check);
 				break;
 
 			case R.id.menu_about:
