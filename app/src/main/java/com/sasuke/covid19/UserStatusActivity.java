@@ -13,9 +13,11 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
+import com.google.firebase.firestore.FieldValue;
 import com.sasuke.covid19.strategy.StatusStrategy;
 import com.sasuke.covid19.strategy.StatusStrategyFactory;
 import com.sasuke.covid19.strategy.StatusStrategyResult;
+import com.sasuke.covid19.util.Constant;
 import com.sasuke.covid19.util.StatusUtil;
 
 public class UserStatusActivity extends BaseActivity {
@@ -59,9 +61,12 @@ public class UserStatusActivity extends BaseActivity {
 		testedNegCtv.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
+				StatusUtil.Status status = StatusUtil.Status.Negative;
+
 				getTestedNegativeCtvAnimator(testedNegCtv).start();
 				statusCtv.setPrimaryText(testedNegCtv.getPrimaryText());
-				setStatusPreferenceValue(StatusUtil.Status.Negative);
+				setStringPreference(_STATUS_REF_KEY, status.toString());
+				setStatusOnDb(status);
 			}
 		});
 
@@ -74,8 +79,10 @@ public class UserStatusActivity extends BaseActivity {
 					getTestedPositiveCtvAnimator(testedPosCtv, recoveredCtv).start();
 				}
 
+				StatusUtil.Status status = StatusUtil.Status.Positive;
 				statusCtv.setPrimaryText(testedPosCtv.getPrimaryText());
-				setStatusPreferenceValue(StatusUtil.Status.Positive);
+				setStringPreference(_STATUS_REF_KEY, status.toString());
+				setStatusOnDb(status);
 			}
 		});
 
@@ -84,8 +91,10 @@ public class UserStatusActivity extends BaseActivity {
 			public void onClick(View view) {
 				getRecoveredCtvAnimator(recoveredCtv, checkMark).start();
 
+				StatusUtil.Status status = StatusUtil.Status.Recovered;
 				statusCtv.setPrimaryText(recoveredCtv.getPrimaryText());
-				setStatusPreferenceValue(StatusUtil.Status.Recovered);
+				setStringPreference(_STATUS_REF_KEY, status.toString());
+				setStatusOnDb(status);
 			}
 		});
 
@@ -97,9 +106,6 @@ public class UserStatusActivity extends BaseActivity {
 						.setAction("Action", null).show();
 			}
 		});
-
-
-		// persistStatus();
 	}
 
 	private void setCompoundTextView(CompoundTextView compoundTextView, String primary, String secondary) {
@@ -273,10 +279,6 @@ public class UserStatusActivity extends BaseActivity {
 		return getStringPreference(_STATUS_REF_KEY, StatusUtil.Status.NotTested.toString());
 	}
 
-	private void setStatusPreferenceValue(StatusUtil.Status status) {
-		setStringPreference(_STATUS_REF_KEY, status.toString());
-	}
-
 	private ObjectAnimator getScaleXAnimation(CompoundTextView ctv) {
 		return ObjectAnimator.ofFloat(ctv, "scaleX", 0, 1);
 	}
@@ -289,4 +291,17 @@ public class UserStatusActivity extends BaseActivity {
 		return ObjectAnimator.ofFloat(ctv, "translationX", 1000f);
 	}
 
+	private void setStatusOnDb(StatusUtil.Status status) {
+		String userDocumentId = getStringPreference(Constant.USER_DOC_ID_PREF_KEY, "");
+
+		if (userDocumentId.equals("")) {
+			return;
+		}
+
+		String statusField = Constant.UserTable.STATUS_MAP + "." + status.toString();
+		db.collection(Constant.UserTable.TABLE_NAME).document(userDocumentId).update(
+				statusField, FieldValue.serverTimestamp(),
+				Constant.UserTable.INFECTED, StatusUtil.isInfected(status)
+		);
+	}
 }

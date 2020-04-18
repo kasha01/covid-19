@@ -17,7 +17,6 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.sasuke.covid19.util.Constant;
 import com.sasuke.covid19.util.StatusUtil;
 
@@ -26,6 +25,7 @@ import java.util.Map;
 
 public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
+	private static final String IS_USER_DATA_INIT_PREF_KEY = "_IS_USER_DATA_INIT";
 	private static final String _IS_USE_SEEK_CHECKED = "menu_item_use_seek";
 
 	private GoogleMap mMap;
@@ -36,6 +36,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		setContentView(R.layout.activity_maps);
 
 		Toolbar toolbar = findViewById(R.id.toolbar);
+		toolbar.setTitle(getString(R.string.main_activity_toolbar_title));
 		toolbar.setNavigationIcon(R.drawable.ic_person_white_48dp);
 		setSupportActionBar(toolbar);
 
@@ -46,6 +47,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 				startActivity(intent);
 			}
 		});
+
+		initUserData();
 
 		// Obtain the SupportMapFragment and get notified when the map is ready to be used.
 		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -102,5 +105,32 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		LatLng sydney = new LatLng(-34, 151);
 		mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
 		mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+	}
+
+	private void initUserData() {
+		boolean isUserDataInit = getBoolPreference(IS_USER_DATA_INIT_PREF_KEY, false);
+
+		if (isUserDataInit) {
+			return;
+		}
+
+		final DocumentReference userDocument = db.collection(Constant.UserTable.TABLE_NAME).document();
+
+		Map<String, Object> statusMap = new HashMap<>();
+		statusMap.put(StatusUtil.Status.NotTested.toString(), FieldValue.serverTimestamp());
+
+		Map<String, Object> user = new HashMap<>();
+		user.put(Constant.UserTable.STATUS, StatusUtil.Status.NotTested.toString());
+		user.put(Constant.UserTable.STATUS_MAP, statusMap);
+		user.put(Constant.UserTable.INFECTED, false);
+		user.put(Constant.UserTable.LAST_STATUS_UPDATE, FieldValue.serverTimestamp());
+
+		userDocument.set(user).addOnSuccessListener(new OnSuccessListener<Void>() {
+			@Override
+			public void onSuccess(Void aVoid) {
+				setStringPreference(Constant.USER_DOC_ID_PREF_KEY, userDocument.getId());
+				setBoolPreference(IS_USER_DATA_INIT_PREF_KEY, true);
+			}
+		});
 	}
 }

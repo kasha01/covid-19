@@ -1,6 +1,7 @@
 <resources>
 	<string name="app_name">Covid19</string>
-	<string name="title_activity_maps">Map</string>
+	<string name="title_activity_maps">Covid19</string>
+	<string name="main_activity_toolbar_title">Covid-19 Trace Map</string>
 
 	<string name="menu_use_seekbar">use seekbar</string>
 	<string name="menu_about">about</string>
