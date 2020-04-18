@@ -3,13 +3,11 @@ package com.sasuke.covid19;
 import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
-import android.content.SharedPreferences;
 import android.graphics.drawable.Animatable;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 
@@ -20,10 +18,9 @@ import com.sasuke.covid19.strategy.StatusStrategyFactory;
 import com.sasuke.covid19.strategy.StatusStrategyResult;
 import com.sasuke.covid19.util.StatusUtil;
 
-public class UserStatusActivity extends AppCompatActivity {
+public class UserStatusActivity extends BaseActivity {
 
 	private static final String _STATUS_REF_KEY = "STATUS";
-	private SharedPreferences preferences;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -31,8 +28,6 @@ public class UserStatusActivity extends AppCompatActivity {
 		setContentView(R.layout.activity_user_status);
 		Toolbar toolbar = findViewById(R.id.toolbar);
 		setSupportActionBar(toolbar);
-
-		preferences = getPreferences(MODE_PRIVATE);
 
 		//final String status = getStatusPreferenceValue();
 		String status = StatusUtil.Status.NotTested.toString();
@@ -57,9 +52,9 @@ public class UserStatusActivity extends AppCompatActivity {
 		setCompoundTextView(statusCtv, statusLiteral, "current status");
 
 		// set status test ctv
-		setCompoundTextView(testedNegCtv, "NEGATIVE", "TESTED");
-		setCompoundTextView(testedPosCtv, "POSITIVE", "TESTED");
-		setCompoundTextView(recoveredCtv, "RECOVERED", "");
+		setCompoundTextView(testedNegCtv, StatusUtil.Status.Negative.toString().toUpperCase(), "TESTED");
+		setCompoundTextView(testedPosCtv, StatusUtil.Status.Positive.toString().toUpperCase(), "TESTED");
+		setCompoundTextView(recoveredCtv, StatusUtil.Status.Recovered.toString().toUpperCase(), "");
 
 		testedNegCtv.setOnClickListener(new View.OnClickListener() {
 			@Override
@@ -102,6 +97,9 @@ public class UserStatusActivity extends AppCompatActivity {
 						.setAction("Action", null).show();
 			}
 		});
+
+
+		// persistStatus();
 	}
 
 	private void setCompoundTextView(CompoundTextView compoundTextView, String primary, String secondary) {
@@ -272,12 +270,11 @@ public class UserStatusActivity extends AppCompatActivity {
 	}
 
 	private String getStatusPreferenceValue() {
-		return preferences.getString(_STATUS_REF_KEY, StatusUtil.Status.NotTested.toString());
+		return getStringPreference(_STATUS_REF_KEY, StatusUtil.Status.NotTested.toString());
 	}
 
 	private void setStatusPreferenceValue(StatusUtil.Status status) {
-		SharedPreferences.Editor editor = preferences.edit();
-		editor.putString(_STATUS_REF_KEY, status.toString()).apply();
+		setStringPreference(_STATUS_REF_KEY, status.toString());
 	}
 
 	private ObjectAnimator getScaleXAnimation(CompoundTextView ctv) {
@@ -291,4 +288,5 @@ public class UserStatusActivity extends AppCompatActivity {
 	private ObjectAnimator getTransitionXAnimation(CompoundTextView ctv) {
 		return ObjectAnimator.ofFloat(ctv, "translationX", 1000f);
 	}
+
 }

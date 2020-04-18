@@ -1,14 +1,11 @@
 package com.sasuke.covid19;
 
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -17,21 +14,26 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.sasuke.covid19.util.Constant;
+import com.sasuke.covid19.util.StatusUtil;
 
-public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
+import java.util.HashMap;
+import java.util.Map;
+
+public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 	private static final String _IS_USE_SEEK_CHECKED = "menu_item_use_seek";
 
 	private GoogleMap mMap;
 
-	private SharedPreferences preferences;
-
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_maps);
-
-		preferences = getPreferences(Context.MODE_PRIVATE);
 
 		Toolbar toolbar = findViewById(R.id.toolbar);
 		toolbar.setNavigationIcon(R.drawable.ic_person_white_48dp);
@@ -45,7 +47,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 			}
 		});
 
-
 		// Obtain the SupportMapFragment and get notified when the map is ready to be used.
 		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
 				.findFragmentById(R.id.map);
@@ -56,7 +57,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 	public boolean onCreateOptionsMenu(Menu menu) {
 		getMenuInflater().inflate(R.menu.menu_maps_toolbar, menu);
 
-		boolean isChecked = preferences.getBoolean(_IS_USE_SEEK_CHECKED, false);
+		boolean isChecked = getBoolPreference(_IS_USE_SEEK_CHECKED, false);
 		menu.getItem(0).setChecked(isChecked);
 
 		return super.onCreateOptionsMenu(menu);
@@ -69,8 +70,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 				boolean check = item.isChecked();
 				item.setChecked(!check);
 
-				SharedPreferences.Editor editor = preferences.edit();
-				editor.putBoolean(_IS_USE_SEEK_CHECKED, !check).apply();
+				setBoolPreference(_IS_USE_SEEK_CHECKED, !check);
 				break;
 
 			case R.id.menu_about:

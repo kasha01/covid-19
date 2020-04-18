@@ -15,6 +15,10 @@ public class StatusUtil {
 		}
 	}
 
+	public static boolean isInfected(Status status){
+		return status == Status.Positive;
+	}
+
 	public static String ToStatusLiteral(int ordinal) {
 		Status status = Status.values()[ordinal];
 		return ToStatusLiteral(status);
