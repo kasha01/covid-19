@@ -34,8 +34,8 @@ public class UserStatusActivity extends AppCompatActivity {
 
 		preferences = getPreferences(MODE_PRIVATE);
 
-		//final int status = getStatusPreferenceValue();
-		int status = 2;
+		//final String status = getStatusPreferenceValue();
+		String status = StatusUtil.Status.NotTested.toString();
 
 		final CompoundTextView statusCtv = findViewById(R.id.user_status_ctv_status);
 		final CompoundTextView testedNegCtv = findViewById(R.id.user_status_ctv_tested_neg);
@@ -45,7 +45,7 @@ public class UserStatusActivity extends AppCompatActivity {
 
 		// set UI
 		StatusStrategyFactory factory = new StatusStrategyFactory();
-		StatusStrategy strategy = factory.getStrategy(StatusUtil.Status.values()[status]);
+		StatusStrategy strategy = factory.getStrategy(StatusUtil.Status.valueOf(status));
 		StatusStrategyResult result = strategy.getStatusVisiblity();
 		testedNegCtv.setVisibility(result.getTestedNegativeCtvVisibility());
 		testedPosCtv.setVisibility(result.getTestedPositiveCtvVisibility());
@@ -73,7 +73,7 @@ public class UserStatusActivity extends AppCompatActivity {
 		testedPosCtv.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
-				if (getStatusPreferenceValue() == StatusUtil.Status.NotTested.ordinal()) {
+				if (getStatusPreferenceValue().equals(StatusUtil.Status.NotTested.toString())) {
 					getTestedNegativeAndPositiveCtvAnimator(testedNegCtv, testedPosCtv, recoveredCtv).start();
 				} else {
 					getTestedPositiveCtvAnimator(testedPosCtv, recoveredCtv).start();
@@ -271,13 +271,13 @@ public class UserStatusActivity extends AppCompatActivity {
 		return animatorSet;
 	}
 
-	private int getStatusPreferenceValue() {
-		return preferences.getInt(_STATUS_REF_KEY, StatusUtil.Status.NotTested.ordinal());
+	private String getStatusPreferenceValue() {
+		return preferences.getString(_STATUS_REF_KEY, StatusUtil.Status.NotTested.toString());
 	}
 
 	private void setStatusPreferenceValue(StatusUtil.Status status) {
 		SharedPreferences.Editor editor = preferences.edit();
-		editor.putInt(_STATUS_REF_KEY, status.ordinal()).apply();
+		editor.putString(_STATUS_REF_KEY, status.toString()).apply();
 	}
 
 	private ObjectAnimator getScaleXAnimation(CompoundTextView ctv) {
