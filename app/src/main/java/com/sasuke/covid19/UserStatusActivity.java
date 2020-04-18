@@ -301,7 +301,8 @@ public class UserStatusActivity extends BaseActivity {
 		String statusField = Constant.UserTable.STATUS_MAP + "." + status.toString();
 		db.collection(Constant.UserTable.TABLE_NAME).document(userDocumentId).update(
 				statusField, FieldValue.serverTimestamp(),
-				Constant.UserTable.INFECTED, StatusUtil.isInfected(status)
+				Constant.UserTable.INFECTED, StatusUtil.isInfected(status),
+				Constant.UserTable.LAST_STATUS_UPDATE, FieldValue.serverTimestamp()
 		);
 	}
 }
