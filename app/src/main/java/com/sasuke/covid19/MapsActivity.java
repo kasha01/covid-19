@@ -12,7 +12,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 
@@ -26,6 +25,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.VisibleRegion;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
@@ -46,8 +46,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MapsActivity extends BaseActivity implements OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener,
-		GoogleMap.OnMyLocationClickListener, LocationListener {
+public class MapsActivity extends BaseActivity implements OnMapReadyCallback, LocationDelegate {
 
 	private static final String[] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
 			Manifest.permission.ACCESS_COARSE_LOCATION};
@@ -154,11 +153,17 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Go
 	public void onMapReady(GoogleMap googleMap) {
 		map = googleMap;
 
-		attemptPermisionToQueryAtCurrentLocation();
+		FloatingActionButton myLocationFab = findViewById(R.id.maps_fab_my_location);
+		myLocationFab.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				attemptPermisionAtCurrentLocationWithQuery(null);
+			}
+		});
+
+		attemptPermisionAtCurrentLocationWithQuery(this);
 
 		setCameraIdleListener();
-
-		attemptToEnableLocationLayer();
 	}
 
 	private String initUserData() {
@@ -190,18 +195,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Go
 		return userDocument.getId();
 	}
 
-	@SuppressLint("MissingPermission")
-	private void attemptToEnableLocationLayer() {
-		if (isLocationPermitted()) {
-			map.getUiSettings().setMyLocationButtonEnabled(false);
-			map.setMyLocationEnabled(true);
-			map.setOnMyLocationButtonClickListener(this);
-			map.setOnMyLocationClickListener(this);
-		} else {
-			ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_LOCATION);
-		}
-	}
-
 	private void attemptToStartLocationUpdatesRequest() {
 		if (isLocationPermitted()) {
 			startLocationUpdatesRequest();
@@ -225,16 +218,16 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Go
 		//fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
 	}
 
-	private void attemptPermisionToQueryAtCurrentLocation() {
+	private void attemptPermisionAtCurrentLocationWithQuery(LocationDelegate query) {
 		if (isLocationPermitted()) {
-			queryAtCurrentLocationPermitted(this);
+			queryAtCurrentLocationPermitted(query);
 		} else {
 			ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_LOCATION);
 		}
 	}
 
 	@SuppressLint("MissingPermission")
-	private void queryAtCurrentLocationPermitted(final LocationListener listener) {
+	private void queryAtCurrentLocationPermitted(final LocationDelegate query) {
 		fusedLocationClient.getLastLocation()
 				.addOnSuccessListener(this, new OnSuccessListener<Location>() {
 					@Override
@@ -242,10 +235,9 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Go
 						// Got last known location. In some rare situations this can be null.
 						if (location != null) {
 							moveCamera(location);
-							if (listener != null) {
-								listener.OnLocationQuery(new Pair<>(location, 0f));
+							if (query != null) {
+								query.OnLocationQuery(new Pair<>(location, 0f));
 							}
-							//queryAtLocation(new Pair<>(location, 0f));
 						}
 					}
 				});
@@ -322,15 +314,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Go
 
 	private void updateUI(int traces) {
 		Log.d(TAG, traces + "");
-	}
-
-	@Override
-	public boolean onMyLocationButtonClick() {
-		return false;
-	}
-
-	@Override
-	public void onMyLocationClick(@NonNull Location location) {
 	}
 
 	@Override
