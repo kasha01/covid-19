@@ -12,6 +12,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 
@@ -45,7 +46,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
+public class MapsActivity extends BaseActivity implements OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener,
+		GoogleMap.OnMyLocationClickListener, LocationListener {
 
 	private static final String[] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
 			Manifest.permission.ACCESS_COARSE_LOCATION};
@@ -155,6 +157,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		attemptPermisionToQueryAtCurrentLocation();
 
 		setCameraIdleListener();
+
+		attemptToEnableLocationLayer();
 	}
 
 	private String initUserData() {
@@ -186,20 +190,31 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		return userDocument.getId();
 	}
 
+	@SuppressLint("MissingPermission")
+	private void attemptToEnableLocationLayer() {
+		if (isLocationPermitted()) {
+			map.getUiSettings().setMyLocationButtonEnabled(false);
+			map.setMyLocationEnabled(true);
+			map.setOnMyLocationButtonClickListener(this);
+			map.setOnMyLocationClickListener(this);
+		} else {
+			ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_LOCATION);
+		}
+	}
+
 	private void attemptToStartLocationUpdatesRequest() {
 		if (isLocationPermitted()) {
-			ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_LOCATION);
-		} else {
 			startLocationUpdatesRequest();
+		} else {
+			ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_LOCATION);
 		}
 	}
 
 	private boolean isLocationPermitted() {
-		return checkSelfPermission(permissions[0]) != PackageManager.PERMISSION_GRANTED
-				&& checkSelfPermission(permissions[1]) != PackageManager.PERMISSION_GRANTED;
+		return checkSelfPermission(permissions[0]) == PackageManager.PERMISSION_GRANTED
+				|| checkSelfPermission(permissions[1]) == PackageManager.PERMISSION_GRANTED;
 	}
 
-	@SuppressLint("MissingPermission")
 	private void startLocationUpdatesRequest() {
 		locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
 		locationRequest.setInterval(60 * 60 * 1000);    // 60 minutes
@@ -212,14 +227,14 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 	private void attemptPermisionToQueryAtCurrentLocation() {
 		if (isLocationPermitted()) {
-			ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_LOCATION);
+			queryAtCurrentLocationPermitted(this);
 		} else {
-			queryAtCurrentLocation();
+			ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_LOCATION);
 		}
 	}
 
 	@SuppressLint("MissingPermission")
-	private void queryAtCurrentLocation() {
+	private void queryAtCurrentLocationPermitted(final LocationListener listener) {
 		fusedLocationClient.getLastLocation()
 				.addOnSuccessListener(this, new OnSuccessListener<Location>() {
 					@Override
@@ -227,7 +242,10 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 						// Got last known location. In some rare situations this can be null.
 						if (location != null) {
 							moveCamera(location);
-							queryAtLocation(new Pair<>(location, 0f));
+							if (listener != null) {
+								listener.OnLocationQuery(new Pair<>(location, 0f));
+							}
+							//queryAtLocation(new Pair<>(location, 0f));
 						}
 					}
 				});
@@ -239,7 +257,84 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		map.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, ZOOM_LEVEL));
 	}
 
-	private void queryAtLocation(final Pair<Location, Float> locationRadius) {
+	private void setCameraIdleListener() {
+		map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
+			@Override
+			public void onCameraIdle() {
+				if (!isCameraMoveByAndroid) {
+					// user has panned on the map not android (auto-center or start-up)
+					Pair<Location, Float> pair = getCenterAndRadius();
+					attemptPermisionToQueryAtLocation(pair);
+				}
+
+				isCameraMoveByAndroid = false;
+			}
+		});
+	}
+
+	private void attemptPermisionToQueryAtLocation(Pair<Location, Float> location) {
+		if (isLocationPermitted()) {
+			OnLocationQuery(location);
+		} else {
+			ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_LOCATION);
+		}
+	}
+
+	private float getRadius(Location center) {
+		VisibleRegion region = map.getProjection().getVisibleRegion();
+		double longitude = region.latLngBounds.northeast.longitude;
+		double latitude = region.latLngBounds.northeast.latitude;
+
+		Location locationCorner = new Location("corner");
+		locationCorner.setLatitude(latitude);
+		locationCorner.setLongitude(longitude);
+
+		float distanceKm = locationCorner.distanceTo(center) / 1000;
+		float radiusKm = distanceKm / 2;
+
+		return radiusKm;
+	}
+
+	private Pair<Location, Float> getCenterAndRadius() {
+		VisibleRegion region = map.getProjection().getVisibleRegion();
+		double longitudeNe = region.latLngBounds.northeast.longitude;
+		double latitudeNe = region.latLngBounds.northeast.latitude;
+
+		double longitudeSw = region.latLngBounds.southwest.longitude;
+		double latitudeSw = region.latLngBounds.southwest.latitude;
+
+		double longitudeCenter = (longitudeNe + longitudeSw) / 2;
+		double latitudeCenter = (latitudeNe + latitudeSw) / 2;
+
+		Location center = new Location("center");
+		center.setLatitude(latitudeCenter);
+		center.setLongitude(longitudeCenter);
+
+		Location corner = new Location("corner");
+		corner.setLatitude(latitudeNe);
+		corner.setLongitude(longitudeNe);
+
+		// equivalent to: (distance_meters/1000) / 2 => radius_km
+		float radiusKm = center.distanceTo(corner) / 2000;
+
+		return new Pair<>(center, radiusKm);
+	}
+
+	private void updateUI(int traces) {
+		Log.d(TAG, traces + "");
+	}
+
+	@Override
+	public boolean onMyLocationButtonClick() {
+		return false;
+	}
+
+	@Override
+	public void onMyLocationClick(@NonNull Location location) {
+	}
+
+	@Override
+	public void OnLocationQuery(final Pair<Location, Float> locationRadius) {
 		final int traces[] = new int[1];
 
 		final String userDocId = getStringPreference(Constant.USER_DOC_ID_PREF_KEY, "");
@@ -294,72 +389,5 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 				Log.d(TAG, "query error");
 			}
 		});
-	}
-
-	private void setCameraIdleListener() {
-		map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
-			@Override
-			public void onCameraIdle() {
-				if (!isCameraMoveByAndroid) {
-					// user has panned on the map not android (auto-center or start-up)
-					Pair<Location, Float> pair = getCenterAndRadius();
-					attemptPermisionToQueryAtLocation(pair);
-				}
-
-				isCameraMoveByAndroid = false;
-			}
-		});
-	}
-
-	private void attemptPermisionToQueryAtLocation(Pair<Location, Float> location) {
-		if (isLocationPermitted()) {
-			ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_LOCATION);
-		} else {
-			queryAtLocation(location);
-		}
-	}
-
-	private float getRadius(Location center) {
-		VisibleRegion region = map.getProjection().getVisibleRegion();
-		double longitude = region.latLngBounds.northeast.longitude;
-		double latitude = region.latLngBounds.northeast.latitude;
-
-		Location locationCorner = new Location("corner");
-		locationCorner.setLatitude(latitude);
-		locationCorner.setLongitude(longitude);
-
-		float distanceKm = locationCorner.distanceTo(center) / 1000;
-		float radiusKm = distanceKm / 2;
-
-		return radiusKm;
-	}
-
-	private Pair<Location, Float> getCenterAndRadius() {
-		VisibleRegion region = map.getProjection().getVisibleRegion();
-		double longitudeNe = region.latLngBounds.northeast.longitude;
-		double latitudeNe = region.latLngBounds.northeast.latitude;
-
-		double longitudeSw = region.latLngBounds.southwest.longitude;
-		double latitudeSw = region.latLngBounds.southwest.latitude;
-
-		double longitudeCenter = (longitudeNe + longitudeSw) / 2;
-		double latitudeCenter = (latitudeNe + latitudeSw) / 2;
-
-		Location center = new Location("center");
-		center.setLatitude(latitudeCenter);
-		center.setLongitude(longitudeCenter);
-
-		Location corner = new Location("corner");
-		corner.setLatitude(latitudeNe);
-		corner.setLongitude(longitudeNe);
-
-		// equivalent to: (distance_meters/1000) / 2 => radius_km
-		float radiusKm = center.distanceTo(corner) / 2000;
-
-		return new Pair<>(center, radiusKm);
-	}
-
-	private void updateUI(int traces) {
-		Log.d(TAG, traces + "");
 	}
 }
