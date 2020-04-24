@@ -161,9 +161,20 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 			}
 		});
 
+		attemptToEnableLocation();
+
 		attemptPermisionAtCurrentLocationWithQuery(this);
 
 		setCameraIdleListener();
+	}
+
+	@SuppressLint("MissingPermission")
+	private void attemptToEnableLocation() {
+		if (isLocationPermitted()) {
+			map.setMyLocationEnabled(true);
+		} else {
+			ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_LOCATION);
+		}
 	}
 
 	private String initUserData() {
