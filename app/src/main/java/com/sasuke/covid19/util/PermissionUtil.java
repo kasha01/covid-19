@@ -6,7 +6,6 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -122,7 +121,6 @@ public abstract class PermissionUtil {
 		@Override
 		public void onDismiss(DialogInterface dialog) {
 			super.onDismiss(dialog);
-			Log.d("maps", "dialog dismissed");
 			if (mFinishActivity) {
 				Toast.makeText(getActivity(),
 						R.string.permission_required_toast,

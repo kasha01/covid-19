@@ -49,13 +49,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+// TODO: change mylocation fab icon when location disabled.
 public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
-	private static final String[] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
-			Manifest.permission.ACCESS_COARSE_LOCATION};
-
 	private static final int LOCATION_PERMISSION_REQUEST_CODE = 900;
-
 	private static final String TAG = "maps_activity";
 	private static final float MINIMUM_RADIUS_THRESHOLD_KM = 0.5f;
 	private static final int ZOOM_LEVEL = 13;
@@ -201,6 +198,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 			moveCameraToCurrentLocation(true);
 
 			FloatingActionButton myLocationFab = findViewById(R.id.maps_fab_my_location);
+			myLocationFab.setImageDrawable(getDrawable(R.drawable.ic_my_location_blue_24dp));
 			myLocationFab.setOnClickListener(new View.OnClickListener() {
 				@Override
 				public void onClick(View view) {
@@ -270,7 +268,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	}
 
 	private boolean isLocationPermitted() {
-		return checkSelfPermission(permissions[0]) == PackageManager.PERMISSION_GRANTED;
+		return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
 	}
 
 	private void startLocationUpdatesRequest() {
