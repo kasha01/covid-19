@@ -14,7 +14,6 @@ import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -50,7 +49,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MapsActivity extends BaseActivity implements OnMapReadyCallback, LocationDelegate {
+public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 	private static final String[] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
 			Manifest.permission.ACCESS_COARSE_LOCATION};
@@ -60,7 +59,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 	private static final String TAG = "maps_activity";
 	private static final float MINIMUM_RADIUS_THRESHOLD_KM = 0.5f;
 	private static final int ZOOM_LEVEL = 13;
-	private static final int PERMISSIONS_REQUEST_LOCATION = 300;
 	private static final String IS_USER_DATA_INIT_PREF_KEY = "_IS_USER_DATA_INIT";
 	private static final String IS_USE_SEEK_CHECKED_PREF_KEY = "_MENU_ITEM_USE_SEEK";
 
@@ -99,9 +97,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 		locationRequest = new LocationRequest();
 		locationCallback = new MainLocationCallback(userDocId);
 		fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-
-		//attemptToStartLocationUpdatesRequest();
-		Log.d(TAG, "create");
 
 		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
 				.findFragmentById(R.id.map);
@@ -156,9 +151,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 		if (!permission) {
 			if (isLocationPermitted()) {
 				permissionViewModel.setPermissionGranted(true);
-				if (map != null) {
-					map.setMyLocationEnabled(true);
-				}
+				enableLocationOperationsPermitted();
 				Log.d(TAG, "on post resume, permission changed to enable, update viewmodel with the new perm. setting.");
 			} else {
 				// permission is not granted
@@ -179,52 +172,57 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 		fusedLocationClient.removeLocationUpdates(locationCallback);
 	}
 
-	/**
-	 * Manipulates the map once available.
-	 * This callback is triggered when the map is ready to be used.
-	 * This is where we can add markers or lines, add listeners or move the camera. In this case,
-	 * we just add a marker near Sydney, Australia.
-	 * If Google Play services is not installed on the device, the user will be prompted to install
-	 * it inside the SupportMapFragment. This method will only be triggered once the user has
-	 * installed Google Play services and returned to the app.
-	 */
 	@Override
 	public void onMapReady(GoogleMap googleMap) {
 		map = googleMap;
-		Log.d(TAG, "map is called");
 
-		FloatingActionButton myLocationFab = findViewById(R.id.maps_fab_my_location);
-		myLocationFab.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				//attemptPermisionAtCurrentLocationWithQuery(null);
-			}
-		});
-
-//		attemptToEnableLocation();
-//
-//		attemptPermisionAtCurrentLocationWithQuery(this);
-//
-//		setCameraIdleListener();
-
-		enableLocationWithPermission();
+		attemptEnableLocationOperations();
 	}
 
-	@SuppressLint("MissingPermission")
-	private void enableLocationWithPermission() {
+	private void attemptEnableLocationOperations() {
 		boolean permissionGranted = false;
 
 		if (isLocationPermitted()) {
 			permissionGranted = true;
-			if (map != null) {
-				map.setMyLocationEnabled(true);
-			}
+			enableLocationOperationsPermitted();
 		} else {
 			PermissionUtil.requestPermission(this, LOCATION_PERMISSION_REQUEST_CODE,
 					Manifest.permission.ACCESS_FINE_LOCATION, false);
 		}
 
 		permissionViewModel.setPermissionGranted(permissionGranted);
+	}
+
+	@SuppressLint("MissingPermission")
+	private void enableLocationOperationsPermitted() {
+		if (map != null) {
+			map.setMyLocationEnabled(true);
+
+			moveCameraToCurrentLocation(true);
+
+			FloatingActionButton myLocationFab = findViewById(R.id.maps_fab_my_location);
+			myLocationFab.setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View view) {
+					moveCameraToCurrentLocation(false);
+				}
+			});
+
+			map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
+				@Override
+				public void onCameraIdle() {
+					if (!isCameraMoveByAndroid) {
+						// user has panned on the map not android (auto-center or start-up)
+						Pair<Location, Float> pair = getCenterAndRadius();
+						queryLocation(pair);
+					}
+
+					isCameraMoveByAndroid = false;
+				}
+			});
+		}
+
+		startLocationUpdatesRequest();
 	}
 
 	@Override
@@ -235,20 +233,11 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 
 		boolean permissionGranted = false;
 		if (PermissionUtil.isPermissionGranted(permissions, grantResults, Manifest.permission.ACCESS_FINE_LOCATION)) {
-			enableLocationWithPermission();
+			attemptEnableLocationOperations();
 			permissionGranted = true;
 		}
 
 		permissionViewModel.setPermissionGranted(permissionGranted);
-	}
-
-	@SuppressLint("MissingPermission")
-	private void attemptToEnableLocation() {
-		if (isLocationPermitted()) {
-			map.setMyLocationEnabled(true);
-		} else {
-			ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_LOCATION);
-		}
 	}
 
 	private String initUserData() {
@@ -280,14 +269,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 		return userDocument.getId();
 	}
 
-	private void attemptToStartLocationUpdatesRequest() {
-		if (isLocationPermitted()) {
-			startLocationUpdatesRequest();
-		} else {
-			ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_LOCATION);
-		}
-	}
-
 	private boolean isLocationPermitted() {
 		return checkSelfPermission(permissions[0]) == PackageManager.PERMISSION_GRANTED;
 	}
@@ -302,16 +283,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 		//fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
 	}
 
-	private void attemptPermisionAtCurrentLocationWithQuery(LocationDelegate query) {
-		if (isLocationPermitted()) {
-			queryAtCurrentLocationPermitted(query);
-		} else {
-			ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_LOCATION);
-		}
-	}
-
 	@SuppressLint("MissingPermission")
-	private void queryAtCurrentLocationPermitted(final LocationDelegate query) {
+	private void moveCameraToCurrentLocation(final boolean queryLocation) {
 		fusedLocationClient.getLastLocation()
 				.addOnSuccessListener(this, new OnSuccessListener<Location>() {
 					@Override
@@ -319,8 +292,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 						// Got last known location. In some rare situations this can be null.
 						if (location != null) {
 							moveCamera(location);
-							if (query != null) {
-								query.OnLocationQuery(new Pair<>(location, 0f));
+							if (queryLocation) {
+								queryLocation(new Pair<>(location, 0f));
 							}
 						}
 					}
@@ -331,29 +304,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 		isCameraMoveByAndroid = true;
 		LatLng myLocation = new LatLng(location.getLatitude(), location.getLongitude());
 		map.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, ZOOM_LEVEL));
-	}
-
-	private void setCameraIdleListener() {
-		map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
-			@Override
-			public void onCameraIdle() {
-				if (!isCameraMoveByAndroid) {
-					// user has panned on the map not android (auto-center or start-up)
-					Pair<Location, Float> pair = getCenterAndRadius();
-					attemptPermisionToQueryAtLocation(pair);
-				}
-
-				isCameraMoveByAndroid = false;
-			}
-		});
-	}
-
-	private void attemptPermisionToQueryAtLocation(Pair<Location, Float> location) {
-		if (isLocationPermitted()) {
-			OnLocationQuery(location);
-		} else {
-			ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_LOCATION);
-		}
 	}
 
 	private float getRadius(Location center) {
@@ -400,8 +350,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 		Log.d(TAG, traces + "");
 	}
 
-	@Override
-	public void OnLocationQuery(final Pair<Location, Float> locationRadius) {
+	private void queryLocation(final Pair<Location, Float> locationRadius) {
 		final int traces[] = new int[1];
 
 		final String userDocId = getStringPreference(Constant.USER_DOC_ID_PREF_KEY, "");
