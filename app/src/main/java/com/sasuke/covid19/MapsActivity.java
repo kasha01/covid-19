@@ -12,8 +12,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationRequest;
@@ -34,6 +36,8 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.GeoPoint;
 import com.sasuke.covid19.provider.MainLocationCallback;
 import com.sasuke.covid19.util.Constant;
+import com.sasuke.covid19.util.PermissionUtil;
+import com.sasuke.covid19.util.PermissionViewModel;
 import com.sasuke.covid19.util.StatusUtil;
 
 import org.imperiumlabs.geofirestore.GeoFirestore;
@@ -51,6 +55,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 	private static final String[] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
 			Manifest.permission.ACCESS_COARSE_LOCATION};
 
+	private static final int LOCATION_PERMISSION_REQUEST_CODE = 900;
+
 	private static final String TAG = "maps_activity";
 	private static final float MINIMUM_RADIUS_THRESHOLD_KM = 0.5f;
 	private static final int ZOOM_LEVEL = 13;
@@ -65,6 +71,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 	private LocationRequest locationRequest;
 	private MainLocationCallback locationCallback;
 	private FusedLocationProviderClient fusedLocationClient;
+
+	private PermissionViewModel permissionViewModel;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -83,13 +91,17 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 			}
 		});
 
+		// on create called when app starts or permission is turned off (restarts the app)
+		permissionViewModel = new ViewModelProvider(this).get(PermissionViewModel.class);
+
 		String userDocId = initUserData();
 
 		locationRequest = new LocationRequest();
 		locationCallback = new MainLocationCallback(userDocId);
 		fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-		attemptToStartLocationUpdatesRequest();
+		//attemptToStartLocationUpdatesRequest();
+		Log.d(TAG, "create");
 
 		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
 				.findFragmentById(R.id.map);
@@ -129,6 +141,33 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 	}
 
 	@Override
+	@SuppressLint("MissingPermission")
+	protected void onResumeFragments() {
+		super.onResumeFragments();
+
+		Boolean permission = permissionViewModel.isPermissionGranted();
+
+		// permission not set. indicates app has started/restarted, permission would be handled by enableLocation()
+		if (permission == null) {
+			permissionViewModel.setPermissionGranted(false);
+			return;
+		}
+
+		if (!permission) {
+			if (isLocationPermitted()) {
+				permissionViewModel.setPermissionGranted(true);
+				if (map != null) {
+					map.setMyLocationEnabled(true);
+				}
+				Log.d(TAG, "on post resume, permission changed to enable, update viewmodel with the new perm. setting.");
+			} else {
+				// permission is not granted
+				PermissionUtil.PermissionDeniedDialog.newInstance(false).show(getSupportFragmentManager(), "dialog");
+			}
+		}
+	}
+
+	@Override
 	protected void onPause() {
 		super.onPause();
 		// remove location locationRequest or throttle down
@@ -152,20 +191,55 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 	@Override
 	public void onMapReady(GoogleMap googleMap) {
 		map = googleMap;
+		Log.d(TAG, "map is called");
 
 		FloatingActionButton myLocationFab = findViewById(R.id.maps_fab_my_location);
 		myLocationFab.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
-				attemptPermisionAtCurrentLocationWithQuery(null);
+				//attemptPermisionAtCurrentLocationWithQuery(null);
 			}
 		});
 
-		attemptToEnableLocation();
+//		attemptToEnableLocation();
+//
+//		attemptPermisionAtCurrentLocationWithQuery(this);
+//
+//		setCameraIdleListener();
 
-		attemptPermisionAtCurrentLocationWithQuery(this);
+		enableLocationWithPermission();
+	}
 
-		setCameraIdleListener();
+	@SuppressLint("MissingPermission")
+	private void enableLocationWithPermission() {
+		boolean permissionGranted = false;
+
+		if (isLocationPermitted()) {
+			permissionGranted = true;
+			if (map != null) {
+				map.setMyLocationEnabled(true);
+			}
+		} else {
+			PermissionUtil.requestPermission(this, LOCATION_PERMISSION_REQUEST_CODE,
+					Manifest.permission.ACCESS_FINE_LOCATION, false);
+		}
+
+		permissionViewModel.setPermissionGranted(permissionGranted);
+	}
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+		if (requestCode != LOCATION_PERMISSION_REQUEST_CODE) {
+			return;
+		}
+
+		boolean permissionGranted = false;
+		if (PermissionUtil.isPermissionGranted(permissions, grantResults, Manifest.permission.ACCESS_FINE_LOCATION)) {
+			enableLocationWithPermission();
+			permissionGranted = true;
+		}
+
+		permissionViewModel.setPermissionGranted(permissionGranted);
 	}
 
 	@SuppressLint("MissingPermission")
@@ -215,8 +289,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Lo
 	}
 
 	private boolean isLocationPermitted() {
-		return checkSelfPermission(permissions[0]) == PackageManager.PERMISSION_GRANTED
-				|| checkSelfPermission(permissions[1]) == PackageManager.PERMISSION_GRANTED;
+		return checkSelfPermission(permissions[0]) == PackageManager.PERMISSION_GRANTED;
 	}
 
 	private void startLocationUpdatesRequest() {
