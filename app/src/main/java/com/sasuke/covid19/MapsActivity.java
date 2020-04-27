@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
@@ -24,6 +25,8 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.VisibleRegion;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -302,7 +305,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 						if (location != null) {
 							moveCamera(location);
 							if (queryLocation) {
-								queryLocation(new Pair<>(location, 0f));
+								final float radiusKm = getRadius(location);
+								queryLocation(new Pair<>(location, radiusKm));
 							}
 						}
 					}
@@ -355,9 +359,21 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		return new Pair<>(center, radiusKm);
 	}
 
-	private void updateUI(int traces) {
-		Log.d(TAG, traces + "");
+	private void updateUI(int traces, Location location, float radiusKm) {
+		float radiusMeter = radiusKm * 1000;
+		Log.d(TAG, "traces:" + traces + " - Radius:" + radiusMeter);
+
 		tracesCountCtv.setPrimaryColor(traces);
+
+		CircleOptions circleOptions = new CircleOptions()
+				.center(new LatLng(location.getLatitude(), location.getLongitude()))
+				.radius(radiusMeter) // In meters
+				.strokeWidth(6)
+				.strokeColor(R.color.blue_700)
+				.fillColor(Color.argb(128, 0, 0, 255))
+				.clickable(true);
+
+		Circle circle = map.addCircle(circleOptions);
 	}
 
 	private void queryLocation(final Pair<Location, Float> locationRadius) {
@@ -365,13 +381,10 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 		final String userDocId = getStringPreference(Constant.USER_DOC_ID_PREF_KEY, "");
 
-		Location location = locationRadius.first;
-		float radiusKm = locationRadius.second;
+		final Location location = locationRadius.first;
+		final float radiusKm = Math.max(MINIMUM_RADIUS_THRESHOLD_KM, locationRadius.second);
 
-		if (radiusKm < MINIMUM_RADIUS_THRESHOLD_KM) {
-			// case when i got my location from gps, so radius is not yet calculated.
-			radiusKm = Math.min(MINIMUM_RADIUS_THRESHOLD_KM, getRadius(location));
-		}
+		updateUI(2, location, radiusKm);    // TODO: delete-test
 
 		CollectionReference databaseReference = db.collection(Constant.LocationsTable.TABLE_NAME);
 		final GeoFirestore geoFire = new GeoFirestore(databaseReference);
@@ -407,7 +420,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 			@Override
 			public void onGeoQueryReady() {
 				Log.d(TAG, "on geo query ready. All initial data has been loaded.");
-				updateUI(traces[0]);
+				updateUI(traces[0], location, radiusKm);
 			}
 
 			@Override
