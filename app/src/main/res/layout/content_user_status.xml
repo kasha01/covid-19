@@ -11,10 +11,10 @@
 	tools:showIn="@layout/activity_user_status">
 
 	<com.sasuke.covid19.CompoundTextView
-
 		android:id="@+id/user_status_ctv_status"
-		android:layout_width="match_parent"
-		android:layout_height="80dp"
+		android:layout_width="wrap_content"
+		android:layout_height="60dp"
+		android:layout_gravity="center_horizontal"
 		android:layout_marginTop="20dp"
 		android:layout_marginBottom="100dp" />
 

@@ -2,6 +2,7 @@ package com.sasuke.covid19;
 
 import android.content.Context;
 import android.util.AttributeSet;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.widget.FrameLayout;
 import android.widget.TextView;
@@ -40,5 +41,13 @@ public class CompoundTextView extends FrameLayout {
 	public void setColor(int color) {
 		primaryTextView.setTextColor(color);
 		secondaryTextView.setTextColor(color);
+	}
+
+	public void setPrimaryColor(int color) {
+		primaryTextView.setTextColor(color);
+	}
+
+	public void setSecondaryFontSize(int sizeSp) {
+		secondaryTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp);
 	}
 }

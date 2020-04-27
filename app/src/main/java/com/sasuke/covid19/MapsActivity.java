@@ -14,6 +14,7 @@ import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -61,6 +62,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 	private static boolean isCameraMoveByAndroid = true;
 
+	private CompoundTextView tracesCountCtv;
 	private GoogleMap map;
 
 	private LocationRequest locationRequest;
@@ -88,6 +90,11 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 		// on create called when app starts or permission is turned off (restarts the app)
 		permissionViewModel = new ViewModelProvider(this).get(PermissionViewModel.class);
+
+		tracesCountCtv = findViewById(R.id.maps_ctv_traces_count);
+		tracesCountCtv.setSecondaryText("traces count");
+		tracesCountCtv.setSecondaryFontSize(12);
+		tracesCountCtv.setPrimaryColor(ContextCompat.getColor(this, R.color.text_on_secondary));
 
 		String userDocId = initUserData();
 
@@ -173,6 +180,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	public void onMapReady(GoogleMap googleMap) {
 		map = googleMap;
 
+		map.getUiSettings().setMyLocationButtonEnabled(false);
+
 		attemptEnableLocationOperations();
 	}
 
@@ -206,13 +215,15 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 				}
 			});
 
+			tracesCountCtv.setVisibility(View.VISIBLE);
+
 			map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
 				@Override
 				public void onCameraIdle() {
 					if (!isCameraMoveByAndroid) {
 						// user has panned on the map not android (auto-center or start-up)
 						Pair<Location, Float> pair = getCenterAndRadius();
-						queryLocation(pair);
+						//queryLocation(pair);   //TODO:Uncomment
 					}
 
 					isCameraMoveByAndroid = false;
@@ -220,7 +231,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 			});
 		}
 
-		startLocationUpdatesRequest();
+		//startLocationUpdatesRequest();    //TODO:UNCOMMENT
 	}
 
 	@Override
@@ -346,6 +357,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 	private void updateUI(int traces) {
 		Log.d(TAG, traces + "");
+		tracesCountCtv.setPrimaryColor(traces);
 	}
 
 	private void queryLocation(final Pair<Location, Float> locationRadius) {

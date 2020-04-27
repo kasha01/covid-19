@@ -3,9 +3,12 @@
 
 	<TextView
 		android:layout_width="wrap_content"
-		android:layout_height="60dp"
-		android:layout_gravity="center"
+		android:layout_height="wrap_content"
+		android:textAlignment="center"
+		android:layout_gravity="center_horizontal"
 		android:paddingTop="4dp"
+		android:paddingLeft="4dp"
+		android:paddingRight="4dp"
 		android:text="Tested"
 		android:textSize="16sp" />
 
@@ -13,6 +16,7 @@
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
 		android:layout_gravity="center"
+		android:layout_marginTop="4dp"
 		android:fontFamily="sans-serif-medium"
 		android:paddingTop="6dp"
 		android:text="NEGATIVE"
