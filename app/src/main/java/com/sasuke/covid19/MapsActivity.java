@@ -31,18 +31,28 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.VisibleRegion;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.GeoPoint;
 import com.sasuke.covid19.provider.MainLocationCallback;
 import com.sasuke.covid19.util.Constant;
 import com.sasuke.covid19.util.PermissionUtil;
 import com.sasuke.covid19.util.PermissionViewModel;
 import com.sasuke.covid19.util.StatusUtil;
 
+import org.imperiumlabs.geofirestore.GeoFirestore;
+import org.imperiumlabs.geofirestore.GeoQuery;
+import org.imperiumlabs.geofirestore.listeners.GeoQueryDataEventListener;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-// TODO: change mylocation fab icon when location disabled.
 public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 	private static final int LOCATION_PERMISSION_REQUEST_CODE = 900;
@@ -83,6 +93,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 		tracesCountCtv = findViewById(R.id.maps_ctv_traces_count);
 		tracesCountCtv.setSecondaryText("traces count");
+		tracesCountCtv.setPrimaryText("NA");
 		tracesCountCtv.setSecondaryFontSize(12);
 		tracesCountCtv.setPrimaryColor(ContextCompat.getColor(this, R.color.text_on_secondary));
 
@@ -222,9 +233,21 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 					queryLocation(center, radius);
 				}
 			});
+
+			map.setOnCircleClickListener(new GoogleMap.OnCircleClickListener() {
+				@Override
+				public void onCircleClick(Circle circle) {
+					map.clear();
+				}
+			});
 		}
 
-		//startLocationUpdatesRequest();    //TODO:UNCOMMENT
+		// start Location Updates Request()
+		locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+		locationRequest.setInterval(60 * 60 * 1000);    // 60 minutes
+		locationRequest.setFastestInterval(60 * 1000);  // 1 minute
+		// TODO: comment for testing
+		fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
 	}
 
 	@Override
@@ -275,16 +298,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
 	}
 
-	private void startLocationUpdatesRequest() {
-		locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
-		locationRequest.setInterval(60 * 60 * 1000);    // 60 minutes
-		locationRequest.setFastestInterval(60 * 1000);  // 1 minute
-		//locationRequest.setInterval(5000);
-		//locationRequest.setFastestInterval(5000);
-
-		//fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
-	}
-
 	@SuppressLint("MissingPermission")
 	private void moveCameraToCurrentLocation() {
 		fusedLocationClient.getLastLocation()
@@ -320,31 +333,38 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	}
 
 	private void updateUI(int traces, Location location, float radiusKm) {
-		float radiusMeter = radiusKm * 1000;
-		Log.d(TAG, "traces:" + traces + " - Radius:" + radiusMeter);
+		Log.d(TAG, "traces:" + traces + " - Radius-km:" + radiusKm);
+		tracesCountCtv.setPrimaryText(Integer.toString(traces));
+		drawCircle(location, radiusKm);
+	}
 
-		tracesCountCtv.setPrimaryColor(traces);
+	private void drawCircle(Location location, float radiusKm) {
+		float radiusMeter = radiusKm * 1000;
 
 		CircleOptions circleOptions = new CircleOptions()
 				.center(new LatLng(location.getLatitude(), location.getLongitude()))
 				.radius(radiusMeter) // In meters
 				.strokeWidth(6)
 				.strokeColor(R.color.blue_700)
-				.fillColor(Color.argb(128, 0, 0, 255))
+				.fillColor(Color.argb(20, 0, 0, 255))
 				.clickable(true);
 
+		map.clear();
 		Circle circle = map.addCircle(circleOptions);
+		circle.setClickable(true);
 	}
 
 	private void queryLocation(final Location location, final float radiusKm) {
 		final int traces[] = new int[1];
 
+		tracesCountCtv.setPrimaryText("0");
+
 		final String userDocId = getStringPreference(Constant.USER_DOC_ID_PREF_KEY, "");
 
 		final float radius = Math.max(MINIMUM_RADIUS_THRESHOLD_KM, radiusKm);
 
-		updateUI(2, location, radius);    // TODO: delete-test
-/*
+		// updateUI(2, location, radius);    // TODO: delete-test
+
 		CollectionReference databaseReference = db.collection(Constant.LocationsTable.TABLE_NAME);
 		final GeoFirestore geoFire = new GeoFirestore(databaseReference);
 		GeoQuery geoQuery = geoFire.queryAtLocation(new GeoPoint(location.getLatitude(), location.getLongitude()), radius);
@@ -386,6 +406,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 			public void onGeoQueryError(Exception e) {
 				Log.d(TAG, "query error");
 			}
-		});*/
+		});
 	}
 }
