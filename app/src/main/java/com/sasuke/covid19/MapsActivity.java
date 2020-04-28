@@ -8,7 +8,6 @@ import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
-import android.util.Pair;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -25,31 +24,21 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.VisibleRegion;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.firebase.Timestamp;
-import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.GeoPoint;
 import com.sasuke.covid19.provider.MainLocationCallback;
 import com.sasuke.covid19.util.Constant;
 import com.sasuke.covid19.util.PermissionUtil;
 import com.sasuke.covid19.util.PermissionViewModel;
 import com.sasuke.covid19.util.StatusUtil;
 
-import org.imperiumlabs.geofirestore.GeoFirestore;
-import org.imperiumlabs.geofirestore.GeoQuery;
-import org.imperiumlabs.geofirestore.listeners.GeoQueryDataEventListener;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -62,8 +51,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	private static final int ZOOM_LEVEL = 13;
 	private static final String IS_USER_DATA_INIT_PREF_KEY = "_IS_USER_DATA_INIT";
 	private static final String IS_USE_SEEK_CHECKED_PREF_KEY = "_MENU_ITEM_USE_SEEK";
-
-	private static boolean isCameraMoveByAndroid = true;
 
 	private CompoundTextView tracesCountCtv;
 	private GoogleMap map;
@@ -207,14 +194,14 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		if (map != null) {
 			map.setMyLocationEnabled(true);
 
-			moveCameraToCurrentLocation(true);
+			moveCameraToCurrentLocation();
 
 			FloatingActionButton myLocationFab = findViewById(R.id.maps_fab_my_location);
 			myLocationFab.setImageDrawable(getDrawable(R.drawable.ic_my_location_blue_24dp));
 			myLocationFab.setOnClickListener(new View.OnClickListener() {
 				@Override
 				public void onClick(View view) {
-					moveCameraToCurrentLocation(false);
+					moveCameraToCurrentLocation();
 				}
 			});
 
@@ -223,13 +210,16 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 			map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
 				@Override
 				public void onCameraIdle() {
-					if (!isCameraMoveByAndroid) {
-						// user has panned on the map not android (auto-center or start-up)
-						Pair<Location, Float> pair = getCenterAndRadius();
-						//queryLocation(pair);   //TODO:Uncomment
-					}
+					Log.d(TAG, "camera has moved");
 
-					isCameraMoveByAndroid = false;
+					CameraPosition cameraPosition = map.getCameraPosition();
+					Log.d(TAG, "camera long:" + cameraPosition.target.longitude + " - latit:" + cameraPosition.target.latitude);
+
+					Location center = new Location("center");
+					center.setLatitude(cameraPosition.target.latitude);
+					center.setLongitude(cameraPosition.target.longitude);
+					float radius = getRadius(center);
+					queryLocation(center, radius);
 				}
 			});
 		}
@@ -296,7 +286,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	}
 
 	@SuppressLint("MissingPermission")
-	private void moveCameraToCurrentLocation(final boolean queryLocation) {
+	private void moveCameraToCurrentLocation() {
 		fusedLocationClient.getLastLocation()
 				.addOnSuccessListener(this, new OnSuccessListener<Location>() {
 					@Override
@@ -304,17 +294,12 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 						// Got last known location. In some rare situations this can be null.
 						if (location != null) {
 							moveCamera(location);
-							if (queryLocation) {
-								final float radiusKm = getRadius(location);
-								queryLocation(new Pair<>(location, radiusKm));
-							}
 						}
 					}
 				});
 	}
 
 	private void moveCamera(Location location) {
-		isCameraMoveByAndroid = true;
 		LatLng myLocation = new LatLng(location.getLatitude(), location.getLongitude());
 		map.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, ZOOM_LEVEL));
 	}
@@ -334,31 +319,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		return radiusKm;
 	}
 
-	private Pair<Location, Float> getCenterAndRadius() {
-		VisibleRegion region = map.getProjection().getVisibleRegion();
-		double longitudeNe = region.latLngBounds.northeast.longitude;
-		double latitudeNe = region.latLngBounds.northeast.latitude;
-
-		double longitudeSw = region.latLngBounds.southwest.longitude;
-		double latitudeSw = region.latLngBounds.southwest.latitude;
-
-		double longitudeCenter = (longitudeNe + longitudeSw) / 2;
-		double latitudeCenter = (latitudeNe + latitudeSw) / 2;
-
-		Location center = new Location("center");
-		center.setLatitude(latitudeCenter);
-		center.setLongitude(longitudeCenter);
-
-		Location corner = new Location("corner");
-		corner.setLatitude(latitudeNe);
-		corner.setLongitude(longitudeNe);
-
-		// equivalent to: (distance_meters/1000) / 2 => radius_km
-		float radiusKm = center.distanceTo(corner) / 2000;
-
-		return new Pair<>(center, radiusKm);
-	}
-
 	private void updateUI(int traces, Location location, float radiusKm) {
 		float radiusMeter = radiusKm * 1000;
 		Log.d(TAG, "traces:" + traces + " - Radius:" + radiusMeter);
@@ -376,20 +336,19 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		Circle circle = map.addCircle(circleOptions);
 	}
 
-	private void queryLocation(final Pair<Location, Float> locationRadius) {
+	private void queryLocation(final Location location, final float radiusKm) {
 		final int traces[] = new int[1];
 
 		final String userDocId = getStringPreference(Constant.USER_DOC_ID_PREF_KEY, "");
 
-		final Location location = locationRadius.first;
-		final float radiusKm = Math.max(MINIMUM_RADIUS_THRESHOLD_KM, locationRadius.second);
+		final float radius = Math.max(MINIMUM_RADIUS_THRESHOLD_KM, radiusKm);
 
-		updateUI(2, location, radiusKm);    // TODO: delete-test
-
+		updateUI(2, location, radius);    // TODO: delete-test
+/*
 		CollectionReference databaseReference = db.collection(Constant.LocationsTable.TABLE_NAME);
 		final GeoFirestore geoFire = new GeoFirestore(databaseReference);
-		GeoQuery geoQuery = geoFire.queryAtLocation(new GeoPoint(location.getLatitude(), location.getLongitude()), radiusKm);
-		Log.d(TAG, "query location by radius:" + radiusKm);
+		GeoQuery geoQuery = geoFire.queryAtLocation(new GeoPoint(location.getLatitude(), location.getLongitude()), radius);
+		Log.d(TAG, "query location by radius:" + radius);
 		Log.v(TAG, "query location at: Latitude=" + location.getLatitude() + " - Longitude:" + location.getLongitude());
 
 		geoQuery.addGeoQueryDataEventListener(new GeoQueryDataEventListener() {
@@ -420,13 +379,13 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 			@Override
 			public void onGeoQueryReady() {
 				Log.d(TAG, "on geo query ready. All initial data has been loaded.");
-				updateUI(traces[0], location, radiusKm);
+				updateUI(traces[0], location, radius);
 			}
 
 			@Override
 			public void onGeoQueryError(Exception e) {
 				Log.d(TAG, "query error");
 			}
-		});
+		});*/
 	}
 }
