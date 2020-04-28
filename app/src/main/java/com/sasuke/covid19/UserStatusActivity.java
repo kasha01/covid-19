@@ -11,8 +11,6 @@ import android.widget.ImageView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.firestore.FieldValue;
 import com.sasuke.covid19.strategy.StatusStrategy;
 import com.sasuke.covid19.strategy.StatusStrategyFactory;
@@ -20,9 +18,9 @@ import com.sasuke.covid19.strategy.StatusStrategyResult;
 import com.sasuke.covid19.util.Constant;
 import com.sasuke.covid19.util.StatusUtil;
 
-public class UserStatusActivity extends BaseActivity {
+import static com.sasuke.covid19.util.Constant.STATUS_REF_KEY;
 
-	private static final String _STATUS_REF_KEY = "STATUS";
+public class UserStatusActivity extends BaseActivity {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -65,7 +63,7 @@ public class UserStatusActivity extends BaseActivity {
 
 				getTestedNegativeCtvAnimator(testedNegCtv).start();
 				statusCtv.setPrimaryText(testedNegCtv.getPrimaryText());
-				setStringPreference(_STATUS_REF_KEY, status.toString());
+				setStringPreference(STATUS_REF_KEY, status.toString());
 				setStatusOnDb(status);
 			}
 		});
@@ -81,7 +79,7 @@ public class UserStatusActivity extends BaseActivity {
 
 				StatusUtil.Status status = StatusUtil.Status.Positive;
 				statusCtv.setPrimaryText(testedPosCtv.getPrimaryText());
-				setStringPreference(_STATUS_REF_KEY, status.toString());
+				setStringPreference(STATUS_REF_KEY, status.toString());
 				setStatusOnDb(status);
 			}
 		});
@@ -93,7 +91,7 @@ public class UserStatusActivity extends BaseActivity {
 
 				StatusUtil.Status status = StatusUtil.Status.Recovered;
 				statusCtv.setPrimaryText(recoveredCtv.getPrimaryText());
-				setStringPreference(_STATUS_REF_KEY, status.toString());
+				setStringPreference(STATUS_REF_KEY, status.toString());
 				setStatusOnDb(status);
 			}
 		});
@@ -267,7 +265,7 @@ public class UserStatusActivity extends BaseActivity {
 	}
 
 	private String getStatusPreferenceValue() {
-		return getStringPreference(_STATUS_REF_KEY, StatusUtil.Status.NotTested.toString());
+		return getStringPreference(STATUS_REF_KEY, StatusUtil.Status.NotTested.toString());
 	}
 
 	private ObjectAnimator getScaleXAnimation(CompoundTextView ctv) {

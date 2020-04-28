@@ -243,6 +243,13 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		}
 
 		// start Location Updates Request()
+		boolean isInfected = getBoolPreference(Constant.STATUS_REF_KEY, false);
+		if (isInfected)
+			startLocationUpdatesRequestPermitted();
+	}
+
+	@SuppressLint("MissingPermission")
+	private void startLocationUpdatesRequestPermitted() {
 		locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
 		locationRequest.setInterval(60 * 60 * 1000);    // 60 minutes
 		locationRequest.setFastestInterval(60 * 1000);  // 1 minute
