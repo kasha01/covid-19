@@ -29,8 +29,8 @@ public class UserStatusActivity extends BaseActivity {
 		Toolbar toolbar = findViewById(R.id.toolbar);
 		setSupportActionBar(toolbar);
 
-		//final String status = getStatusPreferenceValue();
-		String status = StatusUtil.Status.NotTested.toString();
+		final String status = getStatusPreferenceValue();
+		//String status = StatusUtil.Status.NotTested.toString();   // todo: remove only for testing
 
 		final CompoundTextView statusCtv = findViewById(R.id.user_status_ctv_status);
 		final CompoundTextView testedNegCtv = findViewById(R.id.user_status_ctv_tested_neg);

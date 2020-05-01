@@ -62,6 +62,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	private static final String IS_USER_DATA_INIT_PREF_KEY = "_IS_USER_DATA_INIT";
 	private static final String IS_USE_SEEK_CHECKED_PREF_KEY = "_MENU_ITEM_USE_SEEK";
 
+	private String status = "";
+
 	private CompoundTextView tracesCountCtv;
 	private GoogleMap map;
 
@@ -98,9 +100,10 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		tracesCountCtv.setPrimaryColor(ContextCompat.getColor(this, R.color.text_on_secondary));
 
 		String userDocId = initUserData();
+		status = getStringPreference(Constant.STATUS_REF_KEY, StatusUtil.Status.NotTested.toString());
 
 		locationRequest = new LocationRequest();
-		locationCallback = new MainLocationCallback(userDocId);
+		locationCallback = new MainLocationCallback(userDocId, status);
 		fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
 		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -242,10 +245,14 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 			});
 		}
 
-		// start Location Updates Request()
-		boolean isInfected = getBoolPreference(Constant.STATUS_REF_KEY, false);
-		if (isInfected)
+		// start Location Updates Request - only record if not recovered (-/+ve and not tested)
+		if (shouldRecordLocationsUpdates())
 			startLocationUpdatesRequestPermitted();
+	}
+
+	private boolean shouldRecordLocationsUpdates() {
+		StatusUtil.Status myStatus = StatusUtil.Status.valueOf(status);
+		return !myStatus.equals(StatusUtil.Status.Recovered);
 	}
 
 	@SuppressLint("MissingPermission")
@@ -278,6 +285,9 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		if (isUserDataInit) {
 			return getStringPreference(Constant.USER_DOC_ID_PREF_KEY, "");
 		}
+
+		// set preference db
+		setStringPreference(Constant.STATUS_REF_KEY, StatusUtil.Status.NotTested.toString());
 
 		final DocumentReference userDocument = db.collection(Constant.UserTable.TABLE_NAME).document();
 
@@ -382,7 +392,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 			@Override
 			public void onDocumentEntered(DocumentSnapshot documentSnapshot, GeoPoint geoPoint) {
 				String snapshotUserDocId = (String) documentSnapshot.get(Constant.LocationsTable.USER_DOCUMENT_ID);
-				Timestamp snapshotTimestamp = (Timestamp) documentSnapshot.get(Constant.LocationsTable.LAST_STATUS_UPDATE);
+				Timestamp snapshotTimestamp = (Timestamp) documentSnapshot.get(Constant.LocationsTable.CREATE_DATE);
 
 				Date currentDateMinusTwoWeeks = new DateTime(DateTimeZone.UTC).minusDays(14).toDate();
 
