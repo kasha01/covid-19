@@ -54,13 +54,18 @@ public class MainLocationCallback extends LocationCallback {
 			isFirstRun = false;
 		}
 
-		StatusUtil.Status statusEnum = StatusUtil.Status.valueOf(status);
-		String locationCollectionName = statusEnum.equals(StatusUtil.Status.Positive) ?
-				Constant.LocationsTable.TABLE_NAME :
-				Constant.LOCATIONS_SAFE_TABLE_NAME;
-
-
 		Map<String, Object> data = new HashMap<>();
+
+		String locationCollectionName;
+
+		StatusUtil.Status statusEnum = StatusUtil.Status.valueOf(status);
+		if (statusEnum.equals(StatusUtil.Status.Positive)) {
+			locationCollectionName = Constant.LocationsTable.TABLE_NAME;
+			data.put(Constant.LocationsTable.IS_COPIED_FROM_LOCATIONS_NEG, false);
+		} else {
+			locationCollectionName = Constant.LOCATIONS_NEG_TABLE_NAME;
+		}
+
 		data.put(Constant.LocationsTable.GEOPOINT, new GeoPoint(latitude, longitude));
 		data.put(Constant.LocationsTable.GEOHASH, new GeoHash(latitude, longitude).getGeoHashString());
 		data.put(Constant.LocationsTable.USER_DOCUMENT_ID, userDocId);

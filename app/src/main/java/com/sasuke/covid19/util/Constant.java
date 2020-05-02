@@ -5,7 +5,7 @@ public class Constant {
 	public static final String USER_DOC_ID_PREF_KEY = "_USER_DOC_ID";
 	public static final String STATUS_REF_KEY = "STATUS";
 
-	public static final String LOCATIONS_SAFE_TABLE_NAME = "locationsSafe";
+	public static final String LOCATIONS_NEG_TABLE_NAME = "locationsSafe";
 
 	public static class UserTable {
 		public final static String TABLE_NAME = "users";
@@ -21,5 +21,6 @@ public class Constant {
 		public final static String GEOHASH = "g";
 		public final static String CREATE_DATE = "createDate";
 		public final static String USER_DOCUMENT_ID = "userDocId";
+		public final static String IS_COPIED_FROM_LOCATIONS_NEG = "isCopiedFromLocationsNeg";
 	}
 }
