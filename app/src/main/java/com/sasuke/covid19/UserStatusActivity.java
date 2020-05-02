@@ -5,6 +5,7 @@ import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.graphics.drawable.Animatable;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 
@@ -21,6 +22,7 @@ import com.sasuke.covid19.util.StatusUtil;
 import static com.sasuke.covid19.util.Constant.STATUS_REF_KEY;
 
 public class UserStatusActivity extends BaseActivity {
+	private static final String TAG = "userStatus_activity";
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -284,14 +286,18 @@ public class UserStatusActivity extends BaseActivity {
 		String userDocumentId = getStringPreference(Constant.USER_DOC_ID_PREF_KEY, "");
 
 		if (userDocumentId.equals("")) {
+			Log.w(TAG, "userDocId from share_pref, to be empty is not expected.");
 			return;
 		}
+
+		Log.d(TAG, "msg:user status changed, new user status:" + status.toString());
 
 		String statusField = Constant.UserTable.STATUS_MAP + "." + status.toString();
 		db.collection(Constant.UserTable.TABLE_NAME).document(userDocumentId).update(
 				statusField, FieldValue.serverTimestamp(),
 				Constant.UserTable.INFECTED, StatusUtil.isInfected(status),
-				Constant.UserTable.LAST_STATUS_UPDATE, FieldValue.serverTimestamp()
+				Constant.UserTable.LAST_STATUS_UPDATE, FieldValue.serverTimestamp(),
+				Constant.UserTable.STATUS, status.toString()
 		);
 	}
 }

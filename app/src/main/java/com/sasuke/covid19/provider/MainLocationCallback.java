@@ -19,10 +19,12 @@ import org.imperiumlabs.geofirestore.core.GeoHash;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.sasuke.covid19.MapsActivity.TAG;
+
 public class MainLocationCallback extends LocationCallback {
 
 	private static boolean isFirstRun;
-	private static Location lastLocation;
+	private static Location lastLocationSaved;
 
 	static {
 		isFirstRun = true;
@@ -34,20 +36,23 @@ public class MainLocationCallback extends LocationCallback {
 	public MainLocationCallback(String userDocId, String status) {
 		this.userDocId = userDocId;
 		this.status = status;
-		lastLocation = new Location("callback");
+		lastLocationSaved = new Location("callback");
 	}
 
 	@Override
 	public void onLocationResult(LocationResult locationResult) {
 		super.onLocationResult(locationResult);
-		Log.d("maps", locationResult.getLastLocation().getLatitude() + "");
+
+		Log.d(TAG, "location callback is called");
 
 		final double longitude = locationResult.getLastLocation().getLongitude();
 		final double latitude = locationResult.getLastLocation().getLatitude();
 
+		// todo: on destroy store lastLocation on db
 		if (!isFirstRun) {
-			float distanceDeltaMeter = locationResult.getLastLocation().distanceTo(lastLocation);
+			float distanceDeltaMeter = locationResult.getLastLocation().distanceTo(lastLocationSaved);
 			if (distanceDeltaMeter < 20) {
+				Log.d(TAG, "locationCallBack is called but returned, distance delta < 20 meter.");
 				return;
 			}
 		} else {
@@ -56,7 +61,7 @@ public class MainLocationCallback extends LocationCallback {
 
 		Map<String, Object> data = new HashMap<>();
 
-		String locationCollectionName;
+		final String locationCollectionName;
 
 		StatusUtil.Status statusEnum = StatusUtil.Status.valueOf(status);
 		if (statusEnum.equals(StatusUtil.Status.Positive)) {
@@ -75,8 +80,10 @@ public class MainLocationCallback extends LocationCallback {
 		db.collection(locationCollectionName).add(data).addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
 			@Override
 			public void onSuccess(DocumentReference documentReference) {
-				lastLocation.setLongitude(longitude);
-				lastLocation.setLatitude(latitude);
+				lastLocationSaved.setLongitude(longitude);
+				lastLocationSaved.setLatitude(latitude);
+				Log.d(TAG, "msg:locationCallBack location is saved to collection:" + locationCollectionName
+						+ " ,latitude:" + latitude + ", longitude:" + longitude);
 			}
 		});
 	}

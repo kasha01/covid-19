@@ -55,8 +55,8 @@ import java.util.Map;
 
 public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
+	public static final String TAG = "maps_activity";
 	private static final int LOCATION_PERMISSION_REQUEST_CODE = 900;
-	private static final String TAG = "maps_activity";
 	private static final float MINIMUM_RADIUS_THRESHOLD_KM = 0.5f;
 	private static final int ZOOM_LEVEL = 13;
 	private static final String IS_USER_DATA_INIT_PREF_KEY = "_IS_USER_DATA_INIT";
@@ -95,7 +95,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 		tracesCountCtv = findViewById(R.id.maps_ctv_traces_count);
 		tracesCountCtv.setSecondaryText("traces count");
-		tracesCountCtv.setPrimaryText("NA");
+		tracesCountCtv.setPrimaryText("-");
 		tracesCountCtv.setSecondaryFontSize(12);
 		tracesCountCtv.setPrimaryColor(ContextCompat.getColor(this, R.color.text_on_secondary));
 
@@ -125,6 +125,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
 			case R.id.menu_use_seek:
+				// TODO: remove use seek
 				boolean check = item.isChecked();
 				item.setChecked(!check);
 
@@ -160,7 +161,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 			if (isLocationPermitted()) {
 				permissionViewModel.setPermissionGranted(true);
 				enableLocationOperationsPermitted();
-				Log.d(TAG, "on post resume, permission changed to enable, update viewmodel with the new perm. setting.");
+				Log.d(TAG, "on post resume, permission changed to enable, update viewmodel with the new permission setting.");
 			} else {
 				// permission is not granted
 				PermissionUtil.PermissionDeniedDialog.newInstance(false).show(getSupportFragmentManager(), "dialog");
@@ -177,6 +178,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
+		Log.d(TAG, "activity destroyed, removing location callback.");
 		fusedLocationClient.removeLocationUpdates(locationCallback);
 	}
 
@@ -224,14 +226,15 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 			map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
 				@Override
 				public void onCameraIdle() {
-					Log.d(TAG, "camera has moved");
-
 					CameraPosition cameraPosition = map.getCameraPosition();
-					Log.d(TAG, "camera long:" + cameraPosition.target.longitude + " - latit:" + cameraPosition.target.latitude);
+					double latitude = cameraPosition.target.latitude;
+					double longitude = cameraPosition.target.longitude;
+
+					Log.d(TAG, "msg:camera moved, longitude:" + longitude + ", latitude:" + latitude);
 
 					Location center = new Location("center");
-					center.setLatitude(cameraPosition.target.latitude);
-					center.setLongitude(cameraPosition.target.longitude);
+					center.setLatitude(latitude);
+					center.setLongitude(longitude);
 					float radius = getRadius(center);
 					queryLocation(center, radius);
 				}
@@ -290,6 +293,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		setStringPreference(Constant.STATUS_REF_KEY, StatusUtil.Status.NotTested.toString());
 
 		final DocumentReference userDocument = db.collection(Constant.UserTable.TABLE_NAME).document();
+		final String userDocId = userDocument.getId();
 
 		Map<String, Object> statusMap = new HashMap<>();
 		statusMap.put(StatusUtil.Status.NotTested.toString(), FieldValue.serverTimestamp());
@@ -303,12 +307,13 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		userDocument.set(user).addOnSuccessListener(new OnSuccessListener<Void>() {
 			@Override
 			public void onSuccess(Void aVoid) {
-				setStringPreference(Constant.USER_DOC_ID_PREF_KEY, userDocument.getId());
+				setStringPreference(Constant.USER_DOC_ID_PREF_KEY, userDocId);
 				setBoolPreference(IS_USER_DATA_INIT_PREF_KEY, true);
+				Log.d(TAG, "user " + userDocId + " was initialized");
 			}
 		});
 
-		return userDocument.getId();
+		return userDocId;
 	}
 
 	private boolean isLocationPermitted() {
@@ -350,9 +355,10 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	}
 
 	private void updateUI(int traces, Location location, float radiusKm) {
-		Log.d(TAG, "traces:" + traces + " - Radius-km:" + radiusKm);
 		tracesCountCtv.setPrimaryText(Integer.toString(traces));
-		drawCircle(location, radiusKm);
+
+		if (traces > 0)
+			drawCircle(location, radiusKm);
 	}
 
 	private void drawCircle(Location location, float radiusKm) {
@@ -385,9 +391,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		CollectionReference databaseReference = db.collection(Constant.LocationsTable.TABLE_NAME);
 		final GeoFirestore geoFire = new GeoFirestore(databaseReference);
 		GeoQuery geoQuery = geoFire.queryAtLocation(new GeoPoint(location.getLatitude(), location.getLongitude()), radius);
-		Log.d(TAG, "query location by radius:" + radius);
-		Log.v(TAG, "query location at: Latitude=" + location.getLatitude() + " - Longitude:" + location.getLongitude());
-
 		geoQuery.addGeoQueryDataEventListener(new GeoQueryDataEventListener() {
 			@Override
 			public void onDocumentEntered(DocumentSnapshot documentSnapshot, GeoPoint geoPoint) {
@@ -415,7 +418,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 			@Override
 			public void onGeoQueryReady() {
-				Log.d(TAG, "on geo query ready. All initial data has been loaded.");
+				Log.d(TAG, "msg: on GeoQueryReady, tracesCount:" + traces[0] + ", radiusKm:" + radius +
+						", longitude:" + location.getLongitude() + ", latitude:" + location.getLatitude());
 				updateUI(traces[0], location, radius);
 			}
 
