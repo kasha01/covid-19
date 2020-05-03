@@ -5,7 +5,7 @@
 
 	<string name="menu_use_seekbar">use seekbar</string>
 	<string name="menu_about">about</string>
-	<string name="title_activity_user_status">UserStatusActivity</string>
+	<string name="title_activity_user_status">Your Covid Test Status</string>
 
 	<!--    Permissions    -->
 	<string name="permission_rationale_location">Access to the location service is required to demonstrate the \'my location\' feature, which shows your current location on the map.</string>

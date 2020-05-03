@@ -10,7 +10,6 @@ import android.view.View;
 import android.widget.ImageView;
 
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.content.ContextCompat;
 
 import com.google.firebase.firestore.FieldValue;
 import com.sasuke.covid19.strategy.StatusStrategy;
@@ -24,17 +23,29 @@ import static com.sasuke.covid19.util.Constant.STATUS_REF_KEY;
 public class UserStatusActivity extends BaseActivity {
 	private static final String TAG = "userStatus_activity";
 
+	private Toolbar toolbar;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_user_status);
-		Toolbar toolbar = findViewById(R.id.toolbar);
+
+		toolbar = findViewById(R.id.toolbar);
+		toolbar.setTitle("Not Tested");
+		toolbar.setSubtitle(getString(R.string.title_activity_user_status));
+		toolbar.setNavigationIcon(R.drawable.ic_arrow_back_white_24dp);
 		setSupportActionBar(toolbar);
+
+		toolbar.setNavigationOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				onBackPressed();
+			}
+		});
 
 		final String status = getStatusPreferenceValue();
 		//String status = StatusUtil.Status.NotTested.toString();   // todo: remove only for testing
 
-		final CompoundTextView statusCtv = findViewById(R.id.user_status_ctv_status);
 		final CompoundTextView testedNegCtv = findViewById(R.id.user_status_ctv_tested_neg);
 		final CompoundTextView testedPosCtv = findViewById(R.id.user_status_ctv_tested_pos);
 		final CompoundTextView recoveredCtv = findViewById(R.id.user_status_ctv_recovered);
@@ -50,8 +61,7 @@ public class UserStatusActivity extends BaseActivity {
 
 		// set status ctv
 		String statusLiteral = result.getStatusLiteral();
-		statusCtv.setColor(ContextCompat.getColor(this, R.color.expressive));
-		setCompoundTextView(statusCtv, statusLiteral, "current status");
+		toolbar.setTitle(statusLiteral);
 
 		// set status test ctv
 		setCompoundTextView(testedNegCtv, StatusUtil.Status.Negative.toString().toUpperCase(), "TESTED");
@@ -64,7 +74,7 @@ public class UserStatusActivity extends BaseActivity {
 				StatusUtil.Status status = StatusUtil.Status.Negative;
 
 				getTestedNegativeCtvAnimator(testedNegCtv).start();
-				statusCtv.setPrimaryText(testedNegCtv.getPrimaryText());
+				toolbar.setTitle(testedNegCtv.getPrimaryText());
 				setStringPreference(STATUS_REF_KEY, status.toString());
 				setStatusOnDb(status);
 			}
@@ -80,7 +90,7 @@ public class UserStatusActivity extends BaseActivity {
 				}
 
 				StatusUtil.Status status = StatusUtil.Status.Positive;
-				statusCtv.setPrimaryText(testedPosCtv.getPrimaryText());
+				toolbar.setTitle(testedPosCtv.getPrimaryText());
 				setStringPreference(STATUS_REF_KEY, status.toString());
 				setStatusOnDb(status);
 			}
@@ -92,7 +102,7 @@ public class UserStatusActivity extends BaseActivity {
 				getRecoveredCtvAnimator(recoveredCtv, checkMark).start();
 
 				StatusUtil.Status status = StatusUtil.Status.Recovered;
-				statusCtv.setPrimaryText(recoveredCtv.getPrimaryText());
+				toolbar.setTitle(recoveredCtv.getPrimaryText());
 				setStringPreference(STATUS_REF_KEY, status.toString());
 				setStatusOnDb(status);
 			}
