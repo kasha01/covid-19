@@ -2,6 +2,10 @@ package com.sasuke.covid19.util;
 
 public class Constant {
 
+	public static final String INTENT_SERVICE_LOCATION_PROVIDER = "IntentService";
+	public static final String INTENT_EXTRA_KEY_STATUS = "EXTRA_KEY_STATUS";
+	public static final String INTENT_EXTRA_KEY_USER_DOC_ID = "EXTRA_KEY_USER_DOC_ID";
+
 	public static final String USER_DOC_ID_PREF_KEY = "_USER_DOC_ID";
 	public static final String STATUS_REF_KEY = "STATUS";
 

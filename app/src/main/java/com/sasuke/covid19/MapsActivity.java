@@ -2,10 +2,12 @@ package com.sasuke.covid19;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -37,6 +39,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.GeoPoint;
+import com.sasuke.covid19.provider.LocationUpdatesIntentService;
 import com.sasuke.covid19.provider.MainLocationCallback;
 import com.sasuke.covid19.util.Constant;
 import com.sasuke.covid19.util.PermissionUtil;
@@ -56,12 +59,20 @@ import java.util.Map;
 public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 	public static final String TAG = "maps_activity";
+	private static final long UPDATE_INTERVAL = 3600000;                        // Every 1 hour
+	private static final long FASTEST_UPDATE_INTERVAL = UPDATE_INTERVAL / 3;    // Every 20 minutes
+	/**
+	 * The max time before batched results are delivered by location services. Results may be
+	 * delivered sooner than this interval.
+	 */
+	private static final long MAX_WAIT_TIME = UPDATE_INTERVAL * 2;              // Every 2 hours
 	private static final int LOCATION_PERMISSION_REQUEST_CODE = 900;
 	private static final float MINIMUM_RADIUS_THRESHOLD_KM = 0.5f;
 	private static final int ZOOM_LEVEL = 13;
 	private static final String IS_USER_DATA_INIT_PREF_KEY = "_IS_USER_DATA_INIT";
 	private static final String IS_USE_SEEK_CHECKED_PREF_KEY = "_MENU_ITEM_USE_SEEK";
 
+	private String userDocId;
 	private String status = "";
 
 	private CompoundTextView tracesCountCtv;
@@ -77,6 +88,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_maps);
+
+		Log.d(TAG, "onCreate called");
 
 		Toolbar toolbar = findViewById(R.id.toolbar);
 		toolbar.setTitle(getString(R.string.main_activity_toolbar_title));
@@ -99,10 +112,9 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		tracesCountCtv.setSecondaryFontSize(12);
 		tracesCountCtv.setPrimaryColor(ContextCompat.getColor(this, R.color.text_on_secondary));
 
-		String userDocId = initUserData();
+		userDocId = initUserData();
 		status = getStringPreference(Constant.STATUS_REF_KEY, StatusUtil.Status.NotTested.toString());
 
-		locationRequest = new LocationRequest();
 		locationCallback = new MainLocationCallback(userDocId, status);
 		fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
@@ -148,6 +160,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	@SuppressLint("MissingPermission")
 	protected void onResumeFragments() {
 		super.onResumeFragments();
+		Log.d(TAG, "on resume fragments");
 
 		Boolean permission = permissionViewModel.isPermissionGranted();
 
@@ -172,14 +185,14 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	@Override
 	protected void onPause() {
 		super.onPause();
-		// remove location locationRequest or throttle down
+		Log.d(TAG, "activity paused");
 	}
 
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		Log.d(TAG, "activity destroyed, removing location callback.");
-		fusedLocationClient.removeLocationUpdates(locationCallback);
+		removeLocationUpdates();
+		Log.d(TAG, "activity destroyed, location callback is removed");
 	}
 
 	@Override
@@ -260,11 +273,9 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 	@SuppressLint("MissingPermission")
 	private void startLocationUpdatesRequestPermitted() {
-		locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
-		locationRequest.setInterval(60 * 60 * 1000);    // 60 minutes
-		locationRequest.setFastestInterval(60 * 1000);  // 1 minute
 		// TODO: comment for testing
-		fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
+		createLocationRequest();
+		requestLocationUpdates();
 	}
 
 	@Override
@@ -428,5 +439,52 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 				Log.d(TAG, "query error");
 			}
 		});
+	}
+
+	private void createLocationRequest() {
+		locationRequest = new LocationRequest();
+		locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+		locationRequest.setInterval(UPDATE_INTERVAL);                   // 60 minutes
+		locationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL);    // 20 minutes
+		locationRequest.setMaxWaitTime(MAX_WAIT_TIME);                  // 2 hours
+	}
+
+	@SuppressLint("MissingPermission")
+	public void requestLocationUpdates() {
+		// foreground
+		fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
+
+		// background
+		/*try {
+			Log.d(TAG, "Starting location updates service");
+			fusedLocationClient.requestLocationUpdates(locationRequest, getPendingIntent());
+		} catch (SecurityException e) {
+			Log.e(TAG, "starting location updates service failed.", e);
+		}*/
+	}
+
+	private void removeLocationUpdates() {
+		Log.d(TAG, "Removing location updates");
+
+		// foreground
+		fusedLocationClient.removeLocationUpdates(locationCallback);
+
+		// background
+		// fusedLocationClient.removeLocationUpdates(getPendingIntent());
+	}
+
+	private PendingIntent getPendingIntent() {
+		Uri.Builder builder = new Uri.Builder();
+		builder.scheme("http")
+				.authority("com.sasuke.covid19")
+				.appendPath("extra")
+				.appendQueryParameter(Constant.INTENT_EXTRA_KEY_STATUS, status)
+				.appendQueryParameter(Constant.INTENT_EXTRA_KEY_USER_DOC_ID, userDocId);
+
+		Intent intent = new Intent(this, LocationUpdatesIntentService.class);
+		intent.setData(builder.build());
+		intent.setAction(LocationUpdatesIntentService.ACTION_PROCESS_UPDATES);
+
+		return PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 	}
 }
