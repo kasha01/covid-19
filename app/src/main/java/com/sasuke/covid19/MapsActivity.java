@@ -186,25 +186,15 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	@Override
 	protected void onPause() {
 		super.onPause();
-		Log.d(TAG, "activity paused");
-	}
 
-	@Override
-	protected void onDestroy() {
-		super.onDestroy();
-
-		try {
-			Location location = locationCallback.getLastLocationSaved();
-			if (location != null) {
-				setFloatPreference(Constant.LOCATION_UPDATES_SERVICE_RESULT_LONGITUDE_PREF_KEY, (float) location.getLongitude());
-				setFloatPreference(Constant.LOCATION_UPDATES_SERVICE_RESULT_LATITUDE_PREF_KEY, (float) location.getLatitude());
-				Log.d(TAG, "on destroy, lastLocation is saved in shared pref");
-			}
-		} finally {
-			removeLocationUpdates();
+		Location location = locationCallback.getLastLocationSaved();
+		if (location != null) {
+			setFloatPreference(Constant.LOCATION_UPDATES_SERVICE_RESULT_LONGITUDE_PREF_KEY, (float) location.getLongitude());
+			setFloatPreference(Constant.LOCATION_UPDATES_SERVICE_RESULT_LATITUDE_PREF_KEY, (float) location.getLatitude());
+			Log.d(TAG, "on pause, lastLocation is saved in shared pref");
 		}
 
-		Log.d(TAG, "activity destroyed, location callback is removed");
+		Log.d(TAG, "activity paused");
 	}
 
 	@Override
