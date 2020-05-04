@@ -38,4 +38,13 @@ public class BaseActivity extends AppCompatActivity {
 	protected boolean getBoolPreference(String key, boolean defaultValue) {
 		return preferences.getBoolean(key, defaultValue);
 	}
+
+	protected void setFloatPreference(String key, float value) {
+		SharedPreferences.Editor editor = preferences.edit();
+		editor.putFloat(key, value).apply();
+	}
+
+	protected float getFloatPreference(String key, float defaultValue) {
+		return preferences.getFloat(key, defaultValue);
+	}
 }

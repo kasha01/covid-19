@@ -2,6 +2,12 @@ package com.sasuke.covid19.util;
 
 public class Constant {
 
+	public final static float INVALID_LOCATION_COORDINATE = -300;
+
+	public final static String LOCATION_UPDATES_SERVICE_RESULT_LONGITUDE_PREF_KEY = "_LOCATION_UPDATE_RESULT_LONGITUDE";
+	public final static String LOCATION_UPDATES_SERVICE_RESULT_LATITUDE_PREF_KEY = "_LOCATION_UPDATE_RESULT_LATITUDE";
+
+	public static final String CALLBACK_SERVICE_LOCATION_PROVIDER = "Callback";
 	public static final String INTENT_SERVICE_LOCATION_PROVIDER = "IntentService";
 	public static final String INTENT_EXTRA_KEY_STATUS = "EXTRA_KEY_STATUS";
 	public static final String INTENT_EXTRA_KEY_USER_DOC_ID = "EXTRA_KEY_USER_DOC_ID";

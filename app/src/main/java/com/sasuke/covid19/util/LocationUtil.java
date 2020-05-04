@@ -5,22 +5,22 @@ import android.content.SharedPreferences;
 import android.location.Location;
 import android.preference.PreferenceManager;
 
-public class LocationUtil {
-	private final static String LOCATION_UPDATES_RESULT_LONGITUDE_PREF_KEY = "_LOCATION_UPDATE_RESULT_LONGITUDE";
-	private final static String LOCATION_UPDATES_RESULT_LATITUDE_PREF_KEY = "_LOCATION_UPDATE_RESULT_LATITUDE";
+import static com.sasuke.covid19.util.Constant.LOCATION_UPDATES_SERVICE_RESULT_LATITUDE_PREF_KEY;
+import static com.sasuke.covid19.util.Constant.LOCATION_UPDATES_SERVICE_RESULT_LONGITUDE_PREF_KEY;
 
+public class LocationUtil {
 	public static void setLocationUpdatesResultOnSharedPref(Context context, Location location) {
 		SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
 
-		sharedPreferences.edit().putFloat(LOCATION_UPDATES_RESULT_LATITUDE_PREF_KEY, (float) location.getLatitude()).apply();
-		sharedPreferences.edit().putFloat(LOCATION_UPDATES_RESULT_LONGITUDE_PREF_KEY, (float) location.getLongitude()).apply();
+		sharedPreferences.edit().putFloat(LOCATION_UPDATES_SERVICE_RESULT_LATITUDE_PREF_KEY, (float) location.getLatitude()).apply();
+		sharedPreferences.edit().putFloat(LOCATION_UPDATES_SERVICE_RESULT_LONGITUDE_PREF_KEY, (float) location.getLongitude()).apply();
 	}
 
 	public static Location getLocationUpdatesResultOnSharedPref(Context context) {
 		SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
 
-		float longitude = sharedPreferences.getFloat(LOCATION_UPDATES_RESULT_LONGITUDE_PREF_KEY, -300);
-		float latitude = sharedPreferences.getFloat(LOCATION_UPDATES_RESULT_LATITUDE_PREF_KEY, -300);
+		float longitude = sharedPreferences.getFloat(LOCATION_UPDATES_SERVICE_RESULT_LONGITUDE_PREF_KEY, -300);
+		float latitude = sharedPreferences.getFloat(LOCATION_UPDATES_SERVICE_RESULT_LATITUDE_PREF_KEY, -300);
 
 		Location location = null;
 

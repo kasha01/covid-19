@@ -115,7 +115,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		userDocId = initUserData();
 		status = getStringPreference(Constant.STATUS_REF_KEY, StatusUtil.Status.NotTested.toString());
 
-		locationCallback = new MainLocationCallback(userDocId, status);
+		Location lastLocationSavedPref = getLastLocationSavedPref();
+		locationCallback = new MainLocationCallback(userDocId, status, lastLocationSavedPref);
 		fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
 		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -191,7 +192,18 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		removeLocationUpdates();
+
+		try {
+			Location location = locationCallback.getLastLocationSaved();
+			if (location != null) {
+				setFloatPreference(Constant.LOCATION_UPDATES_SERVICE_RESULT_LONGITUDE_PREF_KEY, (float) location.getLongitude());
+				setFloatPreference(Constant.LOCATION_UPDATES_SERVICE_RESULT_LATITUDE_PREF_KEY, (float) location.getLatitude());
+				Log.d(TAG, "on destroy, lastLocation is saved in shared pref");
+			}
+		} finally {
+			removeLocationUpdates();
+		}
+
 		Log.d(TAG, "activity destroyed, location callback is removed");
 	}
 
@@ -486,5 +498,22 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		intent.setAction(LocationUpdatesIntentService.ACTION_PROCESS_UPDATES);
 
 		return PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+	}
+
+	private Location getLastLocationSavedPref() {
+		Location result = null;
+
+		float latitude = getFloatPreference(Constant.LOCATION_UPDATES_SERVICE_RESULT_LATITUDE_PREF_KEY,
+				Constant.INVALID_LOCATION_COORDINATE);
+		float longitude = getFloatPreference(Constant.LOCATION_UPDATES_SERVICE_RESULT_LONGITUDE_PREF_KEY,
+				Constant.INVALID_LOCATION_COORDINATE);
+
+		if (latitude != Constant.INVALID_LOCATION_COORDINATE && longitude != Constant.INVALID_LOCATION_COORDINATE) {
+			result = new Location(Constant.CALLBACK_SERVICE_LOCATION_PROVIDER);
+			result.setLatitude(latitude);
+			result.setLongitude(longitude);
+		}
+
+		return result;
 	}
 }

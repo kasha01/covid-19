@@ -19,24 +19,17 @@ import org.imperiumlabs.geofirestore.core.GeoHash;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.sasuke.covid19.MapsActivity.TAG;
-
 public class MainLocationCallback extends LocationCallback {
+	private static final String TAG = "location_callback";
 
-	private static boolean isFirstRun;
-	private static Location lastLocationSaved;
-
-	static {
-		isFirstRun = true;
-	}
-
+	private Location lastLocationSaved;
 	private String userDocId;
 	private String status;
 
-	public MainLocationCallback(String userDocId, String status) {
+	public MainLocationCallback(String userDocId, String status, Location lastLocationSavedPref) {
 		this.userDocId = userDocId;
 		this.status = status;
-		lastLocationSaved = new Location("callback");
+		this.lastLocationSaved = lastLocationSavedPref;
 	}
 
 	@Override
@@ -45,19 +38,42 @@ public class MainLocationCallback extends LocationCallback {
 
 		Log.d(TAG, "location callback is called");
 
-		final double longitude = locationResult.getLastLocation().getLongitude();
-		final double latitude = locationResult.getLastLocation().getLatitude();
+		Location lastLocationResult = locationResult.getLastLocation();
+		if (lastLocationResult != null && hasLocationChangedSinceLastUpdate(lastLocationResult)) {
+			saveLocationUpdatesResult(lastLocationResult);
+		}
+	}
 
-		// todo: on destroy store lastLocation on db
-		if (!isFirstRun) {
-			float distanceDeltaMeter = locationResult.getLastLocation().distanceTo(lastLocationSaved);
+	@Override
+	public void onLocationAvailability(LocationAvailability locationAvailability) {
+		super.onLocationAvailability(locationAvailability);
+	}
+
+	public Location getLastLocationSaved() {
+		return lastLocationSaved;
+	}
+
+	private boolean hasLocationChangedSinceLastUpdate(Location lastLocationResult) {
+		boolean hasLocationChanged = true;
+
+		if (lastLocationSaved != null) {
+			float distanceDeltaMeter = lastLocationResult.distanceTo(lastLocationSaved);
 			if (distanceDeltaMeter < 20) {
-				Log.d(TAG, "locationCallBack is called but returned, distance delta < 20 meter.");
-				return;
+				hasLocationChanged = false;
+				Log.d(TAG, "location background service is called but returned, distance delta < 20 meter.");
 			}
 		} else {
-			isFirstRun = false;
+			// first time service running, no last location exists. Instantiate lastLocationSaved
+			lastLocationSaved = new Location(Constant.CALLBACK_SERVICE_LOCATION_PROVIDER);
+			Log.d(TAG, "first service run");
 		}
+
+		return hasLocationChanged;
+	}
+
+	private void saveLocationUpdatesResult(Location lastLocationResult) {
+		final double longitude = lastLocationResult.getLongitude();
+		final double latitude = lastLocationResult.getLatitude();
 
 		Map<String, Object> data = new HashMap<>();
 
@@ -86,10 +102,5 @@ public class MainLocationCallback extends LocationCallback {
 						+ " ,latitude:" + latitude + ", longitude:" + longitude);
 			}
 		});
-	}
-
-	@Override
-	public void onLocationAvailability(LocationAvailability locationAvailability) {
-		super.onLocationAvailability(locationAvailability);
 	}
 }
