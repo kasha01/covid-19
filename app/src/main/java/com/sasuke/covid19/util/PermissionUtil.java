@@ -17,14 +17,17 @@ import com.sasuke.covid19.R;
 public abstract class PermissionUtil {
 
 	public static void requestPermission(AppCompatActivity activity, int requestId, String permission, boolean finishActivity) {
+
+		// true if the user has previously denied the request
+		// false if a user has denied a permission and selected the Don't ask again option, or if a device policy prohibits the
+		// permission.
 		if (ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)) {
-			// Display a dialog with rationale.
+			// Display a dialog with rationale - explain why granting location is important (ok/cancel)
 			PermissionUtil.RationaleDialog.newInstance(requestId, finishActivity)
 					.show(activity.getSupportFragmentManager(), "dialog");
 		} else {
-			// Location permission has not been granted yet, request it.
+			// Location permission has not been granted yet, request it. (app first startup)
 			ActivityCompat.requestPermissions(activity, new String[]{permission}, requestId);
-
 		}
 	}
 
@@ -85,6 +88,7 @@ public abstract class PermissionUtil {
 		private static final String ARGUMENT_FINISH_ACTIVITY = "finish";
 
 		private boolean mFinishActivity = false;
+		private boolean isOkayClicked = false;
 
 		static RationaleDialog newInstance(int requestCode, boolean finishActivity) {
 			Bundle arguments = new Bundle();
@@ -100,6 +104,7 @@ public abstract class PermissionUtil {
 			Bundle arguments = getArguments();
 			final int requestCode = arguments.getInt(ARGUMENT_PERMISSION_REQUEST_CODE);
 			mFinishActivity = arguments.getBoolean(ARGUMENT_FINISH_ACTIVITY);
+			isOkayClicked = false;
 
 			return new AlertDialog.Builder(getActivity())
 					.setMessage(R.string.permission_rationale_location)
@@ -107,6 +112,7 @@ public abstract class PermissionUtil {
 						@Override
 						public void onClick(DialogInterface dialog, int which) {
 							// After click on Ok, request the permission.
+							isOkayClicked = true;
 							ActivityCompat.requestPermissions(getActivity(),
 									new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
 									requestCode);
@@ -121,13 +127,13 @@ public abstract class PermissionUtil {
 		@Override
 		public void onDismiss(DialogInterface dialog) {
 			super.onDismiss(dialog);
-			if (mFinishActivity) {
-				Toast.makeText(getActivity(),
-						R.string.permission_required_toast,
-						Toast.LENGTH_SHORT)
-						.show();
-				getActivity().finish();
+
+			if (!isOkayClicked) {
+				Toast.makeText(getActivity(), R.string.permission_required_toast, Toast.LENGTH_SHORT).show();
 			}
+
+			if (mFinishActivity)
+				getActivity().finish();
 		}
 	}
 }
