@@ -59,8 +59,8 @@ import java.util.Map;
 public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 	public static final String TAG = "maps_activity";
-	private static final long UPDATE_INTERVAL = 3600000;                        // Every 1 hour
-	private static final long FASTEST_UPDATE_INTERVAL = UPDATE_INTERVAL / 3;    // Every 20 minutes
+	private static final long UPDATE_INTERVAL = 1000 * 40;                        // Every 1 hour - 3600000
+	private static final long FASTEST_UPDATE_INTERVAL = UPDATE_INTERVAL;    // Every 20 minutes
 	/**
 	 * The max time before batched results are delivered by location services. Results may be
 	 * delivered sooner than this interval.
@@ -71,10 +71,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	private static final int ZOOM_LEVEL = 13;
 	private static final String IS_USER_DATA_INIT_PREF_KEY = "_IS_USER_DATA_INIT";
 	private static final String IS_USE_SEEK_CHECKED_PREF_KEY = "_MENU_ITEM_USE_SEEK";
-
+	private static String status = "";
 	private String userDocId;
-	private String status = "";
-
 	private CompoundTextView tracesCountCtv;
 	private GoogleMap map;
 
@@ -83,6 +81,10 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	private FusedLocationProviderClient fusedLocationClient;
 
 	private PermissionViewModel permissionViewModel;
+
+	public static String getStatus() {
+		return status;
+	}
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -116,7 +118,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		status = getStringPreference(Constant.STATUS_REF_KEY, StatusUtil.Status.NotTested.toString());
 
 		Location lastLocationSavedPref = getLastLocationSavedPref();
-		locationCallback = new MainLocationCallback(userDocId, status, lastLocationSavedPref);
+		locationCallback = new MainLocationCallback(userDocId, lastLocationSavedPref);
 		fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
 		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -163,15 +165,15 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		super.onResumeFragments();
 		Log.d(TAG, "on resume fragments");
 
-		Boolean permission = permissionViewModel.isPermissionGranted();
+		Boolean isPermissionGranted = permissionViewModel.isPermissionGranted();
 
 		// permission not set. indicates app has started/restarted, permission would be handled by enableLocation()
-		if (permission == null) {
+		if (isPermissionGranted == null) {
 			permissionViewModel.setPermissionGranted(false);
 			return;
 		}
 
-		if (!permission) {
+		if (!isPermissionGranted) {
 			if (isLocationPermitted()) {
 				permissionViewModel.setPermissionGranted(true);
 				enableLocationOperationsPermitted();
@@ -199,6 +201,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 	@Override
 	public void onMapReady(GoogleMap googleMap) {
+		Log.d(TAG, "on map ready");
+
 		map = googleMap;
 
 		map.getUiSettings().setMyLocationButtonEnabled(false);
@@ -207,6 +211,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	}
 
 	private void attemptEnableLocationOperations() {
+		Log.d(TAG, "attempt location permission");
+
 		boolean permissionGranted = false;
 
 		if (isLocationPermitted()) {
@@ -223,6 +229,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	@SuppressLint("MissingPermission")
 	private void enableLocationOperationsPermitted() {
 		if (map != null) {
+			Log.d(TAG, "enable location operations");
+
 			map.setMyLocationEnabled(true);
 
 			moveCameraToCurrentLocation();
@@ -288,7 +296,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 		boolean permissionGranted = false;
 		if (PermissionUtil.isPermissionGranted(permissions, grantResults, Manifest.permission.ACCESS_FINE_LOCATION)) {
-			attemptEnableLocationOperations();
+			enableLocationOperationsPermitted();
 			permissionGranted = true;
 		}
 
@@ -342,6 +350,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 						// Got last known location. In some rare situations this can be null.
 						if (location != null) {
 							moveCamera(location);
+						} else {
+							Log.w(TAG, "location was null, camera could not be moved");
 						}
 					}
 				});
@@ -370,6 +380,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	private void updateUI(int traces, Location location, float radiusKm) {
 		tracesCountCtv.setPrimaryText(Integer.toString(traces));
 
+		map.clear();
+
 		if (traces > 0)
 			drawCircle(location, radiusKm);
 	}
@@ -385,7 +397,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 				.fillColor(Color.argb(20, 0, 0, 255))
 				.clickable(true);
 
-		map.clear();
 		Circle circle = map.addCircle(circleOptions);
 		circle.setClickable(true);
 	}

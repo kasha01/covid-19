@@ -11,6 +11,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
+import com.sasuke.covid19.MapsActivity;
 import com.sasuke.covid19.util.Constant;
 import com.sasuke.covid19.util.StatusUtil;
 
@@ -24,11 +25,9 @@ public class MainLocationCallback extends LocationCallback {
 
 	private Location lastLocationSaved;
 	private String userDocId;
-	private String status;
 
-	public MainLocationCallback(String userDocId, String status, Location lastLocationSavedPref) {
+	public MainLocationCallback(String userDocId, Location lastLocationSavedPref) {
 		this.userDocId = userDocId;
-		this.status = status;
 		this.lastLocationSaved = lastLocationSavedPref;
 	}
 
@@ -79,6 +78,7 @@ public class MainLocationCallback extends LocationCallback {
 
 		final String locationCollectionName;
 
+		String status = MapsActivity.getStatus();
 		StatusUtil.Status statusEnum = StatusUtil.Status.valueOf(status);
 		if (statusEnum.equals(StatusUtil.Status.Positive)) {
 			locationCollectionName = Constant.LocationsTable.TABLE_NAME;
