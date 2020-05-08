@@ -52,6 +52,7 @@ import org.imperiumlabs.geofirestore.listeners.GeoQueryDataEventListener;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
+import java.text.NumberFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -378,7 +379,25 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	}
 
 	private void updateUI(int traces, Location location, float radiusKm) {
-		tracesCountCtv.setPrimaryText(Integer.toString(traces));
+		int textSize;
+		String text = NumberFormat.getInstance().format(traces);
+
+		if (traces < 1000) {
+			textSize = 34;
+		} else if (traces < 10000) {
+			textSize = 28;
+		} else if (traces < 100000) {
+			textSize = 22;
+		} else {
+			textSize = 18;
+			if (traces >= 1000000) {
+				text = "+1 Million";
+				textSize = 16;
+			}
+		}
+
+		tracesCountCtv.setPrimaryFontSize(textSize);
+		tracesCountCtv.setPrimaryText(text);
 
 		map.clear();
 

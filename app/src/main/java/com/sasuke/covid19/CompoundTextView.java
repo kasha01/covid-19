@@ -47,6 +47,10 @@ public class CompoundTextView extends FrameLayout {
 		primaryTextView.setTextColor(color);
 	}
 
+	public void setPrimaryFontSize(int sizeSp) {
+		primaryTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp);
+	}
+
 	public void setSecondaryFontSize(int sizeSp) {
 		secondaryTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp);
 	}
