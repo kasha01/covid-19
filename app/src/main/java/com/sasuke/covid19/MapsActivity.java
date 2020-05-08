@@ -60,8 +60,8 @@ import java.util.Map;
 public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 	public static final String TAG = "maps_activity";
-	private static final long UPDATE_INTERVAL = 1000 * 40;                        // Every 1 hour - 3600000
-	private static final long FASTEST_UPDATE_INTERVAL = UPDATE_INTERVAL;    // Every 20 minutes
+	private static final long UPDATE_INTERVAL = 3600000;                        // Every 1 hour - 1000 * 40
+	private static final long FASTEST_UPDATE_INTERVAL = UPDATE_INTERVAL / 3;    // Every 20 minutes
 	/**
 	 * The max time before batched results are delivered by location services. Results may be
 	 * delivered sooner than this interval.
