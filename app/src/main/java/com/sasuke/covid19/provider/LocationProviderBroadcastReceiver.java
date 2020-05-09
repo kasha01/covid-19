@@ -7,10 +7,14 @@ import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.util.Log;
 
-import com.sasuke.covid19.MapsActivity;
-
 public class LocationProviderBroadcastReceiver extends BroadcastReceiver {
 	private final static String TAG = "broadcast_receiver";
+
+	private ConnectivityChangeListener listener;
+
+	public LocationProviderBroadcastReceiver(Context listener) {
+		this.listener = (ConnectivityChangeListener) listener;
+	}
 
 	@Override
 	public void onReceive(Context context, Intent intent) {
@@ -22,7 +26,8 @@ public class LocationProviderBroadcastReceiver extends BroadcastReceiver {
 			LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
 			boolean isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
 
-			MapsActivity.setMyLocationFabDrawable(isGpsEnabled);
+			listener.onConnectivityChange(isGpsEnabled);
+			//MapsActivity.setMyLocationFabDrawable(isGpsEnabled);
 		}
 	}
 }

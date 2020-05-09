@@ -37,7 +37,7 @@ public class MainLocationCallback extends LocationCallback {
 
 		Log.d(TAG, "location callback is called");
 
-		Location lastLocationResult = locationResult.getLastLocation();
+		Location lastLocationResult = locationResult != null ? locationResult.getLastLocation() : null;
 		if (lastLocationResult != null && hasLocationChangedSinceLastUpdate(lastLocationResult)) {
 			saveLocationUpdatesResult(lastLocationResult);
 		}

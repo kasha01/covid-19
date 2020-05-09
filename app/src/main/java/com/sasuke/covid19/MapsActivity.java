@@ -51,11 +51,12 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.GeoPoint;
+import com.sasuke.covid19.provider.ConnectivityChangeListener;
 import com.sasuke.covid19.provider.LocationProviderBroadcastReceiver;
 import com.sasuke.covid19.provider.MainLocationCallback;
 import com.sasuke.covid19.util.Constant;
+import com.sasuke.covid19.util.LocationViewModel;
 import com.sasuke.covid19.util.PermissionUtil;
-import com.sasuke.covid19.util.PermissionViewModel;
 import com.sasuke.covid19.util.StatusUtil;
 
 import org.imperiumlabs.geofirestore.GeoFirestore;
@@ -69,7 +70,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
+public class MapsActivity extends BaseActivity implements OnMapReadyCallback, ConnectivityChangeListener {
 
 	public static final String TAG = "maps_activity";
 
@@ -87,30 +88,22 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	private static final String IS_USER_DATA_INIT_PREF_KEY = "_IS_USER_DATA_INIT";
 	private static final String IS_USE_SEEK_CHECKED_PREF_KEY = "_MENU_ITEM_USE_SEEK";
 	private static String status = "";
-	private static FloatingActionButton myLocationFab;
-	private static Drawable locationDisabledDrawable;
-	private static Drawable locationEnabledDrawable;
-	private static GoogleMap map;
+
+	private LocationManager locationManager;
+	private FloatingActionButton myLocationFab;
+	private Drawable locationDisabledDrawable;
+	private Drawable locationEnabledDrawable;
+	private GoogleMap map;
 	private CompoundTextView tracesCountCtv;
 	private LocationRequest locationRequest;
 	private MainLocationCallback locationCallback;
 	private FusedLocationProviderClient fusedLocationClient;
-	private PermissionViewModel permissionViewModel;
+	private LocationViewModel locationViewModel;
 	private BroadcastReceiver broadcastReceiver;
+	private IntentFilter intentFilter;
 
 	public static String getStatus() {
 		return status;
-	}
-
-	@SuppressLint("MissingPermission")
-	public static void setMyLocationFabDrawable(boolean isEnabled) {
-		if (isEnabled)
-			myLocationFab.setImageDrawable(locationEnabledDrawable);
-		else
-			myLocationFab.setImageDrawable(locationDisabledDrawable);
-
-		if (map != null)
-			map.setMyLocationEnabled(isEnabled);
 	}
 
 	@Override
@@ -133,11 +126,16 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		});
 
 		// on create called when app starts or permission is turned off (restarts the app)
-		permissionViewModel = new ViewModelProvider(this).get(PermissionViewModel.class);
+		locationViewModel = new ViewModelProvider(this).get(LocationViewModel.class);
 
-		setTracesCtvOnCreate();
+		locationManager = new LocationManager();
+		createLocationRequestOnCreate();
 
-		setBroadcastReceiverOnCreate();
+		initUiViews();
+
+		intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+		intentFilter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
+		broadcastReceiver = new LocationProviderBroadcastReceiver(this);
 
 		String userDocId = initUserData();
 		status = getStringPreference(Constant.STATUS_REF_KEY, StatusUtil.Status.NotTested.toString());
@@ -146,206 +144,21 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		locationCallback = new MainLocationCallback(userDocId, lastLocationSavedPref);
 		fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-		createLocationRequestOnCreate();
-
 		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
 				.findFragmentById(R.id.map);
 		mapFragment.getMapAsync(this);
 	}
 
-	private void setTracesCtvOnCreate() {
+	private void initUiViews() {
+		locationEnabledDrawable = getDrawable(R.drawable.ic_my_location_blue_24dp);
+		locationDisabledDrawable = getDrawable(R.drawable.ic_location_disabled_blue_24dp);
+		myLocationFab = findViewById(R.id.maps_fab_my_location);
+
 		tracesCountCtv = findViewById(R.id.maps_ctv_traces_count);
 		tracesCountCtv.setSecondaryText("traces count");
 		tracesCountCtv.setPrimaryText("-");
 		tracesCountCtv.setSecondaryFontSize(12);
 		tracesCountCtv.setPrimaryColor(ContextCompat.getColor(this, R.color.text_on_secondary));
-	}
-
-	private void setBroadcastReceiverOnCreate() {
-		myLocationFab = findViewById(R.id.maps_fab_my_location);
-		locationEnabledDrawable = getDrawable(R.drawable.ic_my_location_blue_24dp);
-		locationDisabledDrawable = getDrawable(R.drawable.ic_location_disabled_blue_24dp);
-		broadcastReceiver = new LocationProviderBroadcastReceiver();
-	}
-
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		getMenuInflater().inflate(R.menu.menu_maps_toolbar, menu);
-
-		boolean isChecked = getBoolPreference(IS_USE_SEEK_CHECKED_PREF_KEY, false);
-		menu.getItem(0).setChecked(isChecked);
-
-		return super.onCreateOptionsMenu(menu);
-	}
-
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		switch (item.getItemId()) {
-			case R.id.menu_use_seek:
-				// TODO: remove use seek
-				boolean check = item.isChecked();
-				item.setChecked(!check);
-
-				setBoolPreference(IS_USE_SEEK_CHECKED_PREF_KEY, !check);
-				break;
-
-			case R.id.menu_about:
-				Intent intent = new Intent(this, AboutActivity.class);
-				startActivity(intent);
-				break;
-
-			default:
-				return super.onOptionsItemSelected(item);
-		}
-
-		return true;
-	}
-
-	@Override
-	@SuppressLint("MissingPermission")
-	protected void onResumeFragments() {
-		super.onResumeFragments();
-		Log.d(TAG, "on resume fragments");
-
-		IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-		filter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
-		this.registerReceiver(broadcastReceiver, filter);
-
-		Boolean isPermissionGranted = permissionViewModel.isPermissionGranted();
-
-		// permission not set. indicates app has started/restarted, permission would be handled by enableLocation()
-		if (isPermissionGranted == null) {
-			permissionViewModel.setPermissionGranted(false);
-			return;
-		}
-
-		if (!isPermissionGranted) {
-			if (isLocationPermitted()) {
-				permissionViewModel.setPermissionGranted(true);
-				enableLocationOperationsPermitted();
-				Log.d(TAG, "on post resume, permission changed to enable, update viewmodel with the new permission setting.");
-			} else {
-				// permission is not granted
-				PermissionUtil.PermissionDeniedDialog.newInstance(false).show(getSupportFragmentManager(), "dialog");
-			}
-		}
-	}
-
-	@Override
-	protected void onPause() {
-		super.onPause();
-
-		unregisterReceiver(broadcastReceiver);
-
-		Location location = locationCallback.getLastLocationSaved();
-		if (location != null) {
-			setFloatPreference(Constant.LOCATION_UPDATES_SERVICE_RESULT_LONGITUDE_PREF_KEY, (float) location.getLongitude());
-			setFloatPreference(Constant.LOCATION_UPDATES_SERVICE_RESULT_LATITUDE_PREF_KEY, (float) location.getLatitude());
-			Log.d(TAG, "on pause, lastLocation is saved in shared pref");
-		}
-
-		Log.d(TAG, "activity paused");
-	}
-
-	@Override
-	public void onMapReady(GoogleMap googleMap) {
-		Log.d(TAG, "on map ready");
-
-		map = googleMap;
-
-		map.getUiSettings().setMyLocationButtonEnabled(false);
-
-		attemptEnableLocationOperations();
-	}
-
-	private void attemptEnableLocationOperations() {
-		Log.d(TAG, "attempt location permission");
-
-		boolean permissionGranted = false;
-
-		if (isLocationPermitted()) {
-			permissionGranted = true;
-			enableLocationOperationsPermitted();
-		} else {
-			PermissionUtil.requestPermission(this, LOCATION_PERMISSION_REQUEST_CODE,
-					Manifest.permission.ACCESS_FINE_LOCATION, false);
-		}
-
-		permissionViewModel.setPermissionGranted(permissionGranted);
-	}
-
-	@SuppressLint("MissingPermission")
-	private void  enableLocationOperationsPermitted() {
-		if (map != null) {
-			Log.d(TAG, "enable location operations");
-
-			map.setMyLocationEnabled(true);
-
-			map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
-				@Override
-				public void onCameraIdle() {
-					CameraPosition cameraPosition = map.getCameraPosition();
-					double latitude = cameraPosition.target.latitude;
-					double longitude = cameraPosition.target.longitude;
-
-					Log.d(TAG, "msg:camera moved, longitude:" + longitude + ", latitude:" + latitude);
-
-					Location center = new Location("center");
-					center.setLatitude(latitude);
-					center.setLongitude(longitude);
-					float radius = getRadius(center);
-					queryLocation(center, radius);
-				}
-			});
-
-			myLocationFab.setImageDrawable(getDrawable(R.drawable.ic_my_location_blue_24dp));
-			myLocationFab.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View view) {
-					moveCameraToCurrentLocation();
-				}
-			});
-
-			map.setOnCircleClickListener(new GoogleMap.OnCircleClickListener() {
-				@Override
-				public void onCircleClick(Circle circle) {
-					map.clear();
-				}
-			});
-
-			buildLocationSettingsRequest();
-		}
-
-		// start Location Updates Request - only record if not recovered (-/+ve and not tested)
-		if (shouldRecordLocationsUpdates())
-			startLocationUpdatesRequestPermitted();
-	}
-
-	private boolean shouldRecordLocationsUpdates() {
-		StatusUtil.Status myStatus = StatusUtil.Status.valueOf(status);
-		return !myStatus.equals(StatusUtil.Status.Recovered);
-	}
-
-	@SuppressLint("MissingPermission")
-	private void startLocationUpdatesRequestPermitted() {
-		// TODO: comment for testing
-
-		requestLocationUpdates();
-	}
-
-	@Override
-	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-		if (requestCode != LOCATION_PERMISSION_REQUEST_CODE) {
-			return;
-		}
-
-		boolean permissionGranted = false;
-		if (PermissionUtil.isPermissionGranted(permissions, grantResults, Manifest.permission.ACCESS_FINE_LOCATION)) {
-			enableLocationOperationsPermitted();
-			permissionGranted = true;
-		}
-
-		permissionViewModel.setPermissionGranted(permissionGranted);
 	}
 
 	private String initUserData() {
@@ -382,29 +195,162 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		return userDocId;
 	}
 
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		getMenuInflater().inflate(R.menu.menu_maps_toolbar, menu);
+
+		boolean isChecked = getBoolPreference(IS_USE_SEEK_CHECKED_PREF_KEY, false);
+		menu.getItem(0).setChecked(isChecked);
+
+		return super.onCreateOptionsMenu(menu);
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+			case R.id.menu_use_seek:
+				// TODO: remove use seek
+				boolean check = item.isChecked();
+				item.setChecked(!check);
+
+				setBoolPreference(IS_USE_SEEK_CHECKED_PREF_KEY, !check);
+				break;
+
+			case R.id.menu_about:
+				Intent intent = new Intent(this, AboutActivity.class);
+				startActivity(intent);
+				break;
+
+			default:
+				return super.onOptionsItemSelected(item);
+		}
+
+		return true;
+	}
+
+	@Override
+	protected void onResumeFragments() {
+		super.onResumeFragments();
+		Log.d(TAG, "on resume fragments");
+
+		this.registerReceiver(broadcastReceiver, intentFilter);
+
+		Boolean isPermissionGranted = locationViewModel.isPermissionGranted();
+
+		// permission not set. indicates app has started/restarted, permission would be handled by enableLocation()
+		if (isPermissionGranted == null) {
+			locationViewModel.setPermissionGranted(false);
+			return;
+		}
+
+		if (!isPermissionGranted) {
+			if (isLocationPermitted()) {
+				// permission is granted - check location setting to update location state.
+
+				locationViewModel.setPermissionGranted(true);
+				buildLocationSettingsRequest();
+				Log.d(TAG, "on post resume, permission changed to enable, update viewmodel with the new permission setting.");
+			} else {
+				// permission is not granted
+				locationViewModel.setPermissionGranted(false);
+				locationManager.updateLocationState();
+				PermissionUtil.PermissionDeniedDialog.newInstance(false).show(getSupportFragmentManager(), "dialog");
+			}
+		}
+	}
+
+	@Override
+	protected void onPause() {
+		super.onPause();
+
+		unregisterReceiver(broadcastReceiver);
+
+		Location location = locationCallback.getLastLocationSaved();
+		if (location != null) {
+			setFloatPreference(Constant.LOCATION_UPDATES_SERVICE_RESULT_LONGITUDE_PREF_KEY, (float) location.getLongitude());
+			setFloatPreference(Constant.LOCATION_UPDATES_SERVICE_RESULT_LATITUDE_PREF_KEY, (float) location.getLatitude());
+			Log.d(TAG, "on pause, lastLocation is saved in shared pref");
+		}
+
+		Log.d(TAG, "activity paused");
+	}
+
+	@Override
+	public void onMapReady(GoogleMap googleMap) {
+		Log.d(TAG, "on map ready");
+
+		map = googleMap;
+
+		// set map listeners
+		if (map != null) {
+			map.getUiSettings().setMyLocationButtonEnabled(false);
+
+			myLocationFab.setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View view) {
+					locationManager.moveCameraToCurrentLocation();
+				}
+			});
+
+			map.setOnCircleClickListener(new GoogleMap.OnCircleClickListener() {
+				@Override
+				public void onCircleClick(Circle circle) {
+					map.clear();
+				}
+			});
+
+			map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
+				@Override
+				public void onCameraIdle() {
+					CameraPosition cameraPosition = map.getCameraPosition();
+					double latitude = cameraPosition.target.latitude;
+					double longitude = cameraPosition.target.longitude;
+
+					Log.d(TAG, "msg:camera moved, longitude:" + longitude + ", latitude:" + latitude);
+
+					Location center = new Location("center");
+					center.setLatitude(latitude);
+					center.setLongitude(longitude);
+					float radius = getRadius(center);
+					locationManager.queryLocation(center, radius);
+				}
+			});
+
+			if (isLocationPermitted()) {
+				locationViewModel.setPermissionGranted(true);
+				buildLocationSettingsRequest();
+			} else {
+				locationViewModel.setPermissionGranted(false);
+				locationManager.updateLocationState();
+				PermissionUtil.requestPermission(this, LOCATION_PERMISSION_REQUEST_CODE,
+						Manifest.permission.ACCESS_FINE_LOCATION, false);
+			}
+		}
+	}
+
+	private boolean shouldRecordLocationsUpdates() {
+		StatusUtil.Status myStatus = StatusUtil.Status.valueOf(status);
+		return !myStatus.equals(StatusUtil.Status.Recovered);
+	}
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+		if (requestCode != LOCATION_PERMISSION_REQUEST_CODE) {
+			return;
+		}
+
+		boolean permissionGranted = false;
+		if (PermissionUtil.isPermissionGranted(permissions, grantResults, Manifest.permission.ACCESS_FINE_LOCATION)) {
+			permissionGranted = true;
+		}
+
+		locationViewModel.setPermissionGranted(permissionGranted);
+
+		buildLocationSettingsRequest();
+	}
+
 	private boolean isLocationPermitted() {
 		return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-	}
-
-	@SuppressLint("MissingPermission")
-	private void moveCameraToCurrentLocation() {
-		fusedLocationClient.getLastLocation()
-				.addOnSuccessListener(this, new OnSuccessListener<Location>() {
-					@Override
-					public void onSuccess(Location location) {
-						// Got last known location. In some rare situations this can be null.
-						if (location != null) {
-							moveCamera(location);
-						} else {
-							Log.w(TAG, "location was null, camera could not be moved");
-						}
-					}
-				});
-	}
-
-	private void moveCamera(Location location) {
-		LatLng myLocation = new LatLng(location.getLatitude(), location.getLongitude());
-		map.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, ZOOM_LEVEL));
 	}
 
 	private float getRadius(Location center) {
@@ -464,79 +410,12 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		circle.setClickable(true);
 	}
 
-	private void queryLocation(final Location location, final float radiusKm) {
-		final int traces[] = new int[1];
-
-		tracesCountCtv.setPrimaryText("0");
-
-		final String userDocId = getStringPreference(Constant.USER_DOC_ID_PREF_KEY, "");
-
-		final float radius = Math.max(MINIMUM_RADIUS_THRESHOLD_KM, radiusKm);
-
-		// updateUI(2, location, radius);    // TODO: delete-test
-
-		CollectionReference databaseReference = db.collection(Constant.LocationsTable.TABLE_NAME);
-		final GeoFirestore geoFire = new GeoFirestore(databaseReference);
-		GeoQuery geoQuery = geoFire.queryAtLocation(new GeoPoint(location.getLatitude(), location.getLongitude()), radius);
-		geoQuery.addGeoQueryDataEventListener(new GeoQueryDataEventListener() {
-			@Override
-			public void onDocumentEntered(DocumentSnapshot documentSnapshot, GeoPoint geoPoint) {
-				String snapshotUserDocId = (String) documentSnapshot.get(Constant.LocationsTable.USER_DOCUMENT_ID);
-				Timestamp snapshotTimestamp = (Timestamp) documentSnapshot.get(Constant.LocationsTable.CREATE_DATE);
-
-				Date currentDateMinusTwoWeeks = new DateTime(DateTimeZone.UTC).minusDays(14).toDate();
-
-				if (!snapshotUserDocId.equals(userDocId) && snapshotTimestamp.toDate().after(currentDateMinusTwoWeeks)) {
-					traces[0]++;
-				}
-			}
-
-			@Override
-			public void onDocumentExited(DocumentSnapshot documentSnapshot) {
-			}
-
-			@Override
-			public void onDocumentMoved(DocumentSnapshot documentSnapshot, GeoPoint geoPoint) {
-			}
-
-			@Override
-			public void onDocumentChanged(DocumentSnapshot documentSnapshot, GeoPoint geoPoint) {
-			}
-
-			@Override
-			public void onGeoQueryReady() {
-				Log.d(TAG, "msg: on GeoQueryReady, tracesCount:" + traces[0] + ", radiusKm:" + radius +
-						", longitude:" + location.getLongitude() + ", latitude:" + location.getLatitude());
-				updateUI(traces[0], location, radius);
-			}
-
-			@Override
-			public void onGeoQueryError(Exception e) {
-				Log.d(TAG, "query error");
-			}
-		});
-	}
-
 	private void createLocationRequestOnCreate() {
 		locationRequest = new LocationRequest();
 		locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
 		locationRequest.setInterval(UPDATE_INTERVAL);                   // 60 minutes
 		locationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL);    // 20 minutes
 		locationRequest.setMaxWaitTime(MAX_WAIT_TIME);                  // 2 hours
-	}
-
-	@SuppressLint("MissingPermission")
-	public void requestLocationUpdates() {
-		// foreground
-		fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
-
-		// background
-		/*try {
-			Log.d(TAG, "Starting location updates service");
-			fusedLocationClient.requestLocationUpdates(locationRequest, getPendingIntent());
-		} catch (SecurityException e) {
-			Log.e(TAG, "starting location updates service failed.", e);
-		}*/
 	}
 
 	private void removeLocationUpdates() {
@@ -578,6 +457,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 				try {
 					task.getResult(ApiException.class);
 					Log.d(TAG, "location setting is enabled");
+					locationManager.updateLocationState();
 				} catch (ApiException exception) {
 					switch (exception.getStatusCode()) {
 						case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
@@ -613,7 +493,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 			switch (resultCode) {
 				case Activity.RESULT_OK:
 					// All required changes were successfully made
-					moveCameraToCurrentLocation();
+					locationManager.moveCameraToCurrentLocation();
 					tracesCountCtv.setVisibility(View.VISIBLE);
 					break;
 				case Activity.RESULT_CANCELED:
@@ -622,6 +502,138 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 				default:
 					break;
 			}
+		}
+	}
+
+	@Override
+	public void onConnectivityChange(boolean isEnabled) {
+		locationViewModel.setLocationSettingsEnabled(isEnabled);
+		locationManager.moveCameraToCurrentLocation();
+		locationManager.updateLocationState();
+	}
+
+	@SuppressLint("MissingPermission")
+	class LocationManager {
+
+		void startLocationUpdatesRequestPermitted() {
+			if (!isLocationEnabled()) {
+				Log.w(TAG, "location is not enabled, cannot start location update service.");
+				return;
+			}
+
+			// TODO: comment for testing
+			// foreground
+			fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
+
+			// background
+			/*try {
+				Log.d(TAG, "Starting location updates service");
+				fusedLocationClient.requestLocationUpdates(locationRequest, getPendingIntent());
+			} catch (SecurityException e) {
+				Log.e(TAG, "starting location updates service failed.", e);
+			}*/
+		}
+
+		void moveCameraToCurrentLocation() {
+			if (!isLocationEnabled()) {
+				Log.w(TAG, "location is not enabled, cannot move camera.");
+				return;
+			}
+
+			fusedLocationClient.getLastLocation()
+					.addOnSuccessListener(new OnSuccessListener<Location>() {
+						@Override
+						public void onSuccess(Location location) {
+							// Got last known location. In some rare situations this can be null.
+							if (location != null) {
+								LatLng myLocation = new LatLng(location.getLatitude(), location.getLongitude());
+								map.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, ZOOM_LEVEL));
+							} else {
+								Log.w(TAG, "location was null, camera could not be moved");
+							}
+						}
+					});
+		}
+
+		void queryLocation(final Location location, final float radiusKm) {
+			tracesCountCtv.setPrimaryText("-");
+
+			if (!isLocationEnabled()) {
+				Log.w(TAG, "location is not enabled, cannot query locations.");
+				return;
+			}
+
+			final int traces[] = new int[1];
+
+			final String userDocId = getStringPreference(Constant.USER_DOC_ID_PREF_KEY, "");
+
+			final float radius = Math.max(MINIMUM_RADIUS_THRESHOLD_KM, radiusKm);
+
+			// updateUI(2, location, radius);    // TODO: delete-test
+
+			CollectionReference databaseReference = db.collection(Constant.LocationsTable.TABLE_NAME);
+			final GeoFirestore geoFire = new GeoFirestore(databaseReference);
+			GeoQuery geoQuery = geoFire.queryAtLocation(new GeoPoint(location.getLatitude(), location.getLongitude()), radius);
+			geoQuery.addGeoQueryDataEventListener(new GeoQueryDataEventListener() {
+				@Override
+				public void onDocumentEntered(DocumentSnapshot documentSnapshot, GeoPoint geoPoint) {
+					String snapshotUserDocId = (String) documentSnapshot.get(Constant.LocationsTable.USER_DOCUMENT_ID);
+					Timestamp snapshotTimestamp = (Timestamp) documentSnapshot.get(Constant.LocationsTable.CREATE_DATE);
+
+					Date currentDateMinusTwoWeeks = new DateTime(DateTimeZone.UTC).minusDays(14).toDate();
+
+					if (!snapshotUserDocId.equals(userDocId) && snapshotTimestamp.toDate().after(currentDateMinusTwoWeeks)) {
+						traces[0]++;
+					}
+				}
+
+				@Override
+				public void onDocumentExited(DocumentSnapshot documentSnapshot) {
+				}
+
+				@Override
+				public void onDocumentMoved(DocumentSnapshot documentSnapshot, GeoPoint geoPoint) {
+				}
+
+				@Override
+				public void onDocumentChanged(DocumentSnapshot documentSnapshot, GeoPoint geoPoint) {
+				}
+
+				@Override
+				public void onGeoQueryReady() {
+					Log.d(TAG, "msg: on GeoQueryReady, tracesCount:" + traces[0] + ", radiusKm:" + radius +
+							", longitude:" + location.getLongitude() + ", latitude:" + location.getLatitude());
+					updateUI(traces[0], location, radius);
+				}
+
+				@Override
+				public void onGeoQueryError(Exception e) {
+					Log.d(TAG, "query error");
+				}
+			});
+		}
+
+		void updateLocationState() {
+			boolean isEnabled = isLocationEnabled();
+
+			if (isEnabled) {
+				myLocationFab.setImageDrawable(locationEnabledDrawable);
+
+				// start Location Updates Request - only record if not recovered (-/+ve and not tested)
+				if (shouldRecordLocationsUpdates())
+					locationManager.startLocationUpdatesRequestPermitted();
+
+			} else {
+				myLocationFab.setImageDrawable(locationDisabledDrawable);
+			}
+
+			if (map != null) {
+				map.setMyLocationEnabled(isEnabled);
+			}
+		}
+
+		boolean isLocationEnabled() {
+			return locationViewModel.isLocationSettingsEnabled() && locationViewModel.isPermissionGranted();
 		}
 	}
 }
