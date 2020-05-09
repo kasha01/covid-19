@@ -2,12 +2,16 @@ package com.sasuke.covid19;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.PendingIntent;
+import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
-import android.net.Uri;
+import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -15,13 +19,19 @@ import android.view.MenuItem;
 import android.view.View;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResponse;
+import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -31,7 +41,9 @@ import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.VisibleRegion;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.CollectionReference;
@@ -39,7 +51,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.GeoPoint;
-import com.sasuke.covid19.provider.LocationUpdatesIntentService;
+import com.sasuke.covid19.provider.LocationProviderBroadcastReceiver;
 import com.sasuke.covid19.provider.MainLocationCallback;
 import com.sasuke.covid19.util.Constant;
 import com.sasuke.covid19.util.PermissionUtil;
@@ -60,6 +72,8 @@ import java.util.Map;
 public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 
 	public static final String TAG = "maps_activity";
+
+	private static final int REQUEST_CHECK_SETTINGS = 900;
 	private static final long UPDATE_INTERVAL = 3600000;                        // Every 1 hour - 1000 * 40
 	private static final long FASTEST_UPDATE_INTERVAL = UPDATE_INTERVAL / 3;    // Every 20 minutes
 	/**
@@ -73,18 +87,30 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	private static final String IS_USER_DATA_INIT_PREF_KEY = "_IS_USER_DATA_INIT";
 	private static final String IS_USE_SEEK_CHECKED_PREF_KEY = "_MENU_ITEM_USE_SEEK";
 	private static String status = "";
-	private String userDocId;
+	private static FloatingActionButton myLocationFab;
+	private static Drawable locationDisabledDrawable;
+	private static Drawable locationEnabledDrawable;
+	private static GoogleMap map;
 	private CompoundTextView tracesCountCtv;
-	private GoogleMap map;
-
 	private LocationRequest locationRequest;
 	private MainLocationCallback locationCallback;
 	private FusedLocationProviderClient fusedLocationClient;
-
 	private PermissionViewModel permissionViewModel;
+	private BroadcastReceiver broadcastReceiver;
 
 	public static String getStatus() {
 		return status;
+	}
+
+	@SuppressLint("MissingPermission")
+	public static void setMyLocationFabDrawable(boolean isEnabled) {
+		if (isEnabled)
+			myLocationFab.setImageDrawable(locationEnabledDrawable);
+		else
+			myLocationFab.setImageDrawable(locationDisabledDrawable);
+
+		if (map != null)
+			map.setMyLocationEnabled(isEnabled);
 	}
 
 	@Override
@@ -109,22 +135,37 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		// on create called when app starts or permission is turned off (restarts the app)
 		permissionViewModel = new ViewModelProvider(this).get(PermissionViewModel.class);
 
-		tracesCountCtv = findViewById(R.id.maps_ctv_traces_count);
-		tracesCountCtv.setSecondaryText("traces count");
-		tracesCountCtv.setPrimaryText("-");
-		tracesCountCtv.setSecondaryFontSize(12);
-		tracesCountCtv.setPrimaryColor(ContextCompat.getColor(this, R.color.text_on_secondary));
+		setTracesCtvOnCreate();
 
-		userDocId = initUserData();
+		setBroadcastReceiverOnCreate();
+
+		String userDocId = initUserData();
 		status = getStringPreference(Constant.STATUS_REF_KEY, StatusUtil.Status.NotTested.toString());
 
 		Location lastLocationSavedPref = getLastLocationSavedPref();
 		locationCallback = new MainLocationCallback(userDocId, lastLocationSavedPref);
 		fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
+		createLocationRequestOnCreate();
+
 		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
 				.findFragmentById(R.id.map);
 		mapFragment.getMapAsync(this);
+	}
+
+	private void setTracesCtvOnCreate() {
+		tracesCountCtv = findViewById(R.id.maps_ctv_traces_count);
+		tracesCountCtv.setSecondaryText("traces count");
+		tracesCountCtv.setPrimaryText("-");
+		tracesCountCtv.setSecondaryFontSize(12);
+		tracesCountCtv.setPrimaryColor(ContextCompat.getColor(this, R.color.text_on_secondary));
+	}
+
+	private void setBroadcastReceiverOnCreate() {
+		myLocationFab = findViewById(R.id.maps_fab_my_location);
+		locationEnabledDrawable = getDrawable(R.drawable.ic_my_location_blue_24dp);
+		locationDisabledDrawable = getDrawable(R.drawable.ic_location_disabled_blue_24dp);
+		broadcastReceiver = new LocationProviderBroadcastReceiver();
 	}
 
 	@Override
@@ -166,6 +207,10 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		super.onResumeFragments();
 		Log.d(TAG, "on resume fragments");
 
+		IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+		filter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
+		this.registerReceiver(broadcastReceiver, filter);
+
 		Boolean isPermissionGranted = permissionViewModel.isPermissionGranted();
 
 		// permission not set. indicates app has started/restarted, permission would be handled by enableLocation()
@@ -189,6 +234,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	@Override
 	protected void onPause() {
 		super.onPause();
+
+		unregisterReceiver(broadcastReceiver);
 
 		Location location = locationCallback.getLastLocationSaved();
 		if (location != null) {
@@ -228,24 +275,11 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	}
 
 	@SuppressLint("MissingPermission")
-	private void enableLocationOperationsPermitted() {
+	private void  enableLocationOperationsPermitted() {
 		if (map != null) {
 			Log.d(TAG, "enable location operations");
 
 			map.setMyLocationEnabled(true);
-
-			moveCameraToCurrentLocation();
-
-			FloatingActionButton myLocationFab = findViewById(R.id.maps_fab_my_location);
-			myLocationFab.setImageDrawable(getDrawable(R.drawable.ic_my_location_blue_24dp));
-			myLocationFab.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View view) {
-					moveCameraToCurrentLocation();
-				}
-			});
-
-			tracesCountCtv.setVisibility(View.VISIBLE);
 
 			map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
 				@Override
@@ -264,12 +298,22 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 				}
 			});
 
+			myLocationFab.setImageDrawable(getDrawable(R.drawable.ic_my_location_blue_24dp));
+			myLocationFab.setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View view) {
+					moveCameraToCurrentLocation();
+				}
+			});
+
 			map.setOnCircleClickListener(new GoogleMap.OnCircleClickListener() {
 				@Override
 				public void onCircleClick(Circle circle) {
 					map.clear();
 				}
 			});
+
+			buildLocationSettingsRequest();
 		}
 
 		// start Location Updates Request - only record if not recovered (-/+ve and not tested)
@@ -285,7 +329,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 	@SuppressLint("MissingPermission")
 	private void startLocationUpdatesRequestPermitted() {
 		// TODO: comment for testing
-		createLocationRequest();
+
 		requestLocationUpdates();
 	}
 
@@ -473,7 +517,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		});
 	}
 
-	private void createLocationRequest() {
+	private void createLocationRequestOnCreate() {
 		locationRequest = new LocationRequest();
 		locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
 		locationRequest.setInterval(UPDATE_INTERVAL);                   // 60 minutes
@@ -505,21 +549,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		// fusedLocationClient.removeLocationUpdates(getPendingIntent());
 	}
 
-	private PendingIntent getPendingIntent() {
-		Uri.Builder builder = new Uri.Builder();
-		builder.scheme("http")
-				.authority("com.sasuke.covid19")
-				.appendPath("extra")
-				.appendQueryParameter(Constant.INTENT_EXTRA_KEY_STATUS, status)
-				.appendQueryParameter(Constant.INTENT_EXTRA_KEY_USER_DOC_ID, userDocId);
-
-		Intent intent = new Intent(this, LocationUpdatesIntentService.class);
-		intent.setData(builder.build());
-		intent.setAction(LocationUpdatesIntentService.ACTION_PROCESS_UPDATES);
-
-		return PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-	}
-
 	private Location getLastLocationSavedPref() {
 		Location result = null;
 
@@ -535,5 +564,64 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback {
 		}
 
 		return result;
+	}
+
+	private void buildLocationSettingsRequest() {
+		LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
+		builder.addLocationRequest(locationRequest);
+
+		Task<LocationSettingsResponse> task = LocationServices.getSettingsClient(this).checkLocationSettings(builder.build());
+
+		task.addOnCompleteListener(new OnCompleteListener<LocationSettingsResponse>() {
+			@Override
+			public void onComplete(Task<LocationSettingsResponse> task) {
+				try {
+					task.getResult(ApiException.class);
+					Log.d(TAG, "location setting is enabled");
+				} catch (ApiException exception) {
+					switch (exception.getStatusCode()) {
+						case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+							// Location settings are not satisfied. But could be fixed by showing the
+							// user a dialog.
+							try {
+								// Cast to a resolvable exception.
+								ResolvableApiException resolvable = (ResolvableApiException) exception;
+								// Show the dialog by calling startResolutionForResult(),
+								// and check the result in onActivityResult().
+								resolvable.startResolutionForResult(MapsActivity.this, REQUEST_CHECK_SETTINGS);
+							} catch (IntentSender.SendIntentException e) {
+								// Ignore the error.
+							} catch (ClassCastException e) {
+								// Ignore, should be an impossible error.
+							}
+							break;
+						case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+							// Location settings are not satisfied. However, we have no way to fix the
+							// settings so we won't show the dialog.
+							break;
+					}
+				}
+			}
+		});
+	}
+
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+
+		if (requestCode == REQUEST_CHECK_SETTINGS) {
+			switch (resultCode) {
+				case Activity.RESULT_OK:
+					// All required changes were successfully made
+					moveCameraToCurrentLocation();
+					tracesCountCtv.setVisibility(View.VISIBLE);
+					break;
+				case Activity.RESULT_CANCELED:
+					// The user was asked to change settings, but chose not to
+					break;
+				default:
+					break;
+			}
+		}
 	}
 }
