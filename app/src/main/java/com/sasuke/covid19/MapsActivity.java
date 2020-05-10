@@ -82,11 +82,10 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 	 * delivered sooner than this interval.
 	 */
 	private static final long MAX_WAIT_TIME = UPDATE_INTERVAL * 2;              // Every 2 hours
-	private static final int LOCATION_PERMISSION_REQUEST_CODE = 900;
+	private static final int LOCATION_PERMISSION_REQUEST_CODE = 700;
 	private static final float MINIMUM_RADIUS_THRESHOLD_KM = 0.5f;
 	private static final int ZOOM_LEVEL = 13;
 	private static final String IS_USER_DATA_INIT_PREF_KEY = "_IS_USER_DATA_INIT";
-	private static final String IS_USE_SEEK_CHECKED_PREF_KEY = "_MENU_ITEM_USE_SEEK";
 	private static String status = "";
 
 	private LocationManager locationManager;
@@ -135,6 +134,9 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 
 		intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
 		intentFilter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
+		intentFilter.addAction(Intent.ACTION_PROVIDER_CHANGED);
+		intentFilter.addAction(android.location.LocationManager.PROVIDERS_CHANGED_ACTION);
+
 		broadcastReceiver = new LocationProviderBroadcastReceiver(this);
 
 		String userDocId = initUserData();
@@ -445,6 +447,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 				try {
 					task.getResult(ApiException.class);
 					Log.d(TAG, "location setting is enabled");
+					locationViewModel.setLocationSettingsEnabled(true);
 					locationManager.updateLocationState();
 				} catch (ApiException exception) {
 					switch (exception.getStatusCode()) {
@@ -620,6 +623,9 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 
 			if (map != null) {
 				map.setMyLocationEnabled(isEnabled);
+				if (!isEnabled) {
+					map.clear();
+				}
 			}
 		}
 

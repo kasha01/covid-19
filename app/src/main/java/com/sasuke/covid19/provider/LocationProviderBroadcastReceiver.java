@@ -20,13 +20,31 @@ public class LocationProviderBroadcastReceiver extends BroadcastReceiver {
 	public void onReceive(Context context, Intent intent) {
 		String action = intent.getAction();
 
-		if (action.matches(ConnectivityManager.CONNECTIVITY_ACTION) || action.matches(Intent.ACTION_AIRPLANE_MODE_CHANGED)) {
-			Log.i(TAG, "Location Providers changed");
+		Log.d(TAG, "Broadcast received");
+
+		if (action.matches(ConnectivityManager.CONNECTIVITY_ACTION) || action.matches(Intent.ACTION_AIRPLANE_MODE_CHANGED)
+				|| action.matches(android.location.LocationManager.PROVIDERS_CHANGED_ACTION)) {
 
 			LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-			boolean isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
 
-			listener.onConnectivityChange(isGpsEnabled);
+			boolean isGpsEnabled = false;
+			try {
+				isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+				Log.d(TAG, "is gps enabled:" + isGpsEnabled);
+			} catch (Exception ex) {
+			}
+
+			boolean isNetworkEnabled = false;
+			try {
+				isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+				Log.d(TAG, "is network enabled:" + isNetworkEnabled);
+			} catch (Exception ex) {
+			}
+
+			boolean isLocationEnabled = isGpsEnabled || isNetworkEnabled;
+
+			Log.d(TAG, "isLocation enabled:" + isLocationEnabled);
+			listener.onConnectivityChange(isLocationEnabled);
 		}
 	}
 }
