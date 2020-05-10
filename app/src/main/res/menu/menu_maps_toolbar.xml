@@ -3,13 +3,6 @@
 	xmlns:app="http://schemas.android.com/apk/res-auto">
 
 	<item
-		android:id="@+id/menu_use_seek"
-		android:checkable="true"
-		android:title="@string/menu_use_seekbar"
-		android:titleCondensed="Persist"
-		app:showAsAction="never" />
-
-	<item
 		android:id="@+id/menu_about"
 		android:title="@string/menu_about"
 		app:showAsAction="never" />

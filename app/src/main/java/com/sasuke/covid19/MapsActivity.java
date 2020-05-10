@@ -198,24 +198,12 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		getMenuInflater().inflate(R.menu.menu_maps_toolbar, menu);
-
-		boolean isChecked = getBoolPreference(IS_USE_SEEK_CHECKED_PREF_KEY, false);
-		menu.getItem(0).setChecked(isChecked);
-
 		return super.onCreateOptionsMenu(menu);
 	}
 
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
-			case R.id.menu_use_seek:
-				// TODO: remove use seek
-				boolean check = item.isChecked();
-				item.setChecked(!check);
-
-				setBoolPreference(IS_USE_SEEK_CHECKED_PREF_KEY, !check);
-				break;
-
 			case R.id.menu_about:
 				Intent intent = new Intent(this, AboutActivity.class);
 				startActivity(intent);

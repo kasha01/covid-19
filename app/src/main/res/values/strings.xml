@@ -4,7 +4,7 @@
 	<string name="main_activity_toolbar_title">Covid-19 Traces Map</string>
 
 	<string name="menu_use_seekbar">use seekbar</string>
-	<string name="menu_about">about</string>
+	<string name="menu_about">About</string>
 	<string name="title_activity_user_status">Your Covid-19 Test Status</string>
 
 	<!--    Permissions    -->
