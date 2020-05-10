@@ -237,7 +237,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 
 		Boolean isPermissionGranted = locationViewModel.isPermissionGranted();
 
-		// permission not set. indicates app has started/restarted, permission would be handled by enableLocation()
+		// permission not set. indicates app has started/restarted, permission would be handled on mapReady
 		if (isPermissionGranted == null) {
 			locationViewModel.setPermissionGranted(false);
 			return;
@@ -508,8 +508,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 	@Override
 	public void onConnectivityChange(boolean isEnabled) {
 		locationViewModel.setLocationSettingsEnabled(isEnabled);
-		locationManager.moveCameraToCurrentLocation();
 		locationManager.updateLocationState();
+		locationManager.moveCameraToCurrentLocation();
 	}
 
 	@SuppressLint("MissingPermission")
@@ -536,7 +536,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 
 		void moveCameraToCurrentLocation() {
 			if (!isLocationEnabled()) {
-				Log.w(TAG, "location is not enabled, cannot move camera.");
 				return;
 			}
 
@@ -546,6 +545,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 						public void onSuccess(Location location) {
 							// Got last known location. In some rare situations this can be null.
 							if (location != null) {
+								Log.v(TAG, "accuracy:" + location.getAccuracy());
 								LatLng myLocation = new LatLng(location.getLatitude(), location.getLongitude());
 								map.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, ZOOM_LEVEL));
 							} else {
@@ -616,16 +616,19 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 		void updateLocationState() {
 			boolean isEnabled = isLocationEnabled();
 
+			Log.d(TAG, "updating location state:" + isEnabled);
+
 			if (isEnabled) {
 				myLocationFab.setImageDrawable(locationEnabledDrawable);
-
 				// start Location Updates Request - only record if not recovered (-/+ve and not tested)
 				if (shouldRecordLocationsUpdates())
 					locationManager.startLocationUpdatesRequestPermitted();
-
 			} else {
+				tracesCountCtv.setPrimaryText("-");
 				myLocationFab.setImageDrawable(locationDisabledDrawable);
 			}
+
+			myLocationFab.setClickable(isEnabled);
 
 			if (map != null) {
 				map.setMyLocationEnabled(isEnabled);

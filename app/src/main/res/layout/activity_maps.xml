@@ -48,8 +48,7 @@
 		android:layout_marginTop="100dp"
 		android:layout_marginEnd="10dp"
 		android:background="@drawable/shape_rectangle"
-		android:textSize="@dimen/h6"
-		android:visibility="gone" />
+		android:textSize="@dimen/h6" />
 
 </FrameLayout>
 

@@ -27,7 +27,6 @@ public class LocationProviderBroadcastReceiver extends BroadcastReceiver {
 			boolean isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
 
 			listener.onConnectivityChange(isGpsEnabled);
-			//MapsActivity.setMyLocationFabDrawable(isGpsEnabled);
 		}
 	}
 }
