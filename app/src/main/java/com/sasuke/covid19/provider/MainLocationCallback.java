@@ -59,7 +59,7 @@ public class MainLocationCallback extends LocationCallback {
 			float distanceDeltaMeter = lastLocationResult.distanceTo(lastLocationSaved);
 			if (distanceDeltaMeter < 20) {
 				hasLocationChanged = false;
-				Log.d(TAG, "location callback is called but returned, distance delta < 20 meter.");
+				Log.d(TAG, "location callback returned, distance delta < 20 meter.");
 			}
 		} else {
 			// first time service running, no last location exists. Instantiate lastLocationSaved

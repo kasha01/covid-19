@@ -84,7 +84,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 	private static final long MAX_WAIT_TIME = UPDATE_INTERVAL * 2;              // Every 2 hours
 	private static final int LOCATION_PERMISSION_REQUEST_CODE = 700;
 	private static final float MINIMUM_RADIUS_THRESHOLD_KM = 0.5f;
-	private static final int ZOOM_LEVEL = 13;
+	private static final int ZOOM_LEVEL = 14;
 	private static final String IS_USER_DATA_INIT_PREF_KEY = "_IS_USER_DATA_INIT";
 	private static String status = "";
 
@@ -379,8 +379,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 		tracesCountCtv.setPrimaryFontSize(textSize);
 		tracesCountCtv.setPrimaryText(text);
 
-		map.clear();
-
 		if (traces > 0)
 			drawCircle(location, radiusKm);
 	}
@@ -538,7 +536,8 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 							if (location != null) {
 								Log.v(TAG, "accuracy:" + location.getAccuracy());
 								LatLng myLocation = new LatLng(location.getLatitude(), location.getLongitude());
-								map.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, ZOOM_LEVEL));
+								CameraPosition cameraPosition = new CameraPosition(myLocation, ZOOM_LEVEL, 0, 0);
+								map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
 							} else {
 								Log.w(TAG, "location was null, camera could not be moved");
 							}
@@ -548,6 +547,7 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 
 		void queryLocation(final Location location, final float radiusKm) {
 			tracesCountCtv.setPrimaryText("-");
+			map.clear();
 
 			if (!isLocationEnabled()) {
 				Log.w(TAG, "location is not enabled, cannot query locations.");
