@@ -132,8 +132,8 @@ public abstract class PermissionUtil {
 				Toast.makeText(getActivity(), R.string.permission_required_toast, Toast.LENGTH_SHORT).show();
 			}
 
-			if (mFinishActivity)
-				getActivity().finish();
+			//  if (mFinishActivity)
+			//  getActivity().finish();
 		}
 	}
 }

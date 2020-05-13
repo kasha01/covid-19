@@ -278,7 +278,10 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 			myLocationFab.setOnClickListener(new View.OnClickListener() {
 				@Override
 				public void onClick(View view) {
-					locationManager.moveCameraToCurrentLocation();
+					if (locationViewModel.isLocationSettingsEnabled())
+						locationManager.moveCameraToCurrentLocation();
+					else
+						buildLocationSettingsRequest();
 				}
 			});
 
@@ -618,8 +621,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 				tracesCountCtv.setPrimaryText("-");
 				myLocationFab.setImageDrawable(locationDisabledDrawable);
 			}
-
-			myLocationFab.setClickable(isEnabled);
 
 			if (map != null) {
 				map.setMyLocationEnabled(isEnabled);
