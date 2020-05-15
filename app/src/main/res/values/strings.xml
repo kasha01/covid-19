@@ -11,4 +11,13 @@
 	<string name="permission_rationale_location">Access to the location service is required for \'Covid-19 traces map`\ feature to work, which shows the count of Covid-19 traces at your current location on the map.</string>
 	<string name="location_permission_denied">This app requires location permission to be enabled. Please try again and grant access to use the location.\nIf the permission has been permanently denied, it can be enabled from the System Settings &gt; Apps &gt; \'Covid-19 Map\'.</string>
 	<string name="permission_required_toast">Location permission is required for this app to work.</string>
+
+	<string name="title_activity_about">About</string>
+	<string name="about_header">What is traces count</string>
+	<string name="about">A trace is a location visited by a user identified as tested-positive with covid-19 (corona) virus.</string>
+	<string name="about_2">A geographical area with high traces count is more likely to be infectious with the virus than an area with low traces count.</string>
+
+	<string name="about_privacy">Privacy Policy</string>
+	<string name="about_privacy_desc">We don\'t show the exact locations on the map to protect users privacy.\n\nWe do not record nor require any identification information, such as name, age or gender.\nAll the data is completely anonymous to protect the privacy of all app users.</string>
+
 </resources>
