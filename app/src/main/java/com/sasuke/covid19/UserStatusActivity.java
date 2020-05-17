@@ -44,7 +44,6 @@ public class UserStatusActivity extends BaseActivity {
 		});
 
 		final String status = getStatusPreferenceValue();
-		//String status = StatusUtil.Status.NotTested.toString();   // todo: remove only for testing
 
 		final CompoundTextView testedNegCtv = findViewById(R.id.user_status_ctv_tested_neg);
 		final CompoundTextView testedPosCtv = findViewById(R.id.user_status_ctv_tested_pos);

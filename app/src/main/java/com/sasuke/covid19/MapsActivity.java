@@ -513,7 +513,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 				return;
 			}
 
-			// TODO: comment for testing
 			// foreground
 			fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
 
@@ -562,8 +561,6 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 			final String userDocId = getStringPreference(Constant.USER_DOC_ID_PREF_KEY, "");
 
 			final float radius = Math.max(MINIMUM_RADIUS_THRESHOLD_KM, radiusKm);
-
-			// updateUI(2, location, radius);    // TODO: delete-test
 
 			CollectionReference databaseReference = db.collection(Constant.LocationsTable.TABLE_NAME);
 			final GeoFirestore geoFire = new GeoFirestore(databaseReference);
