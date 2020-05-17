@@ -1,9 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<fragment xmlns:android="http://schemas.android.com/apk/res/android"
-	xmlns:map="http://schemas.android.com/apk/res-auto"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
 	xmlns:tools="http://schemas.android.com/tools"
-	android:id="@+id/map"
-	android:name="com.google.android.gms.maps.SupportMapFragment"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
-	tools:context=".MapsActivity" />
+	app:layout_behavior="@string/appbar_scrolling_view_behavior"
+	tools:context=".MapsActivity"
+	tools:showIn="@layout/activity_maps">
+
+	<com.google.android.material.appbar.AppBarLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:theme="@style/AppTheme.AppBarOverlay">
+
+		<androidx.appcompat.widget.Toolbar
+			android:id="@+id/toolbar"
+			android:layout_width="match_parent"
+			android:layout_height="?attr/actionBarSize"
+			android:background="?attr/colorPrimary"
+			app:popupTheme="@style/AppTheme.PopupOverlay" />
+
+	</com.google.android.material.appbar.AppBarLayout>
+
+	<com.google.android.material.floatingactionbutton.FloatingActionButton
+		android:id="@+id/maps_fab_my_location"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_gravity="bottom|end"
+		android:layout_margin="@dimen/fab_margin"
+		android:backgroundTint="@android:color/white"
+		android:visibility="visible"
+		app:srcCompat="@drawable/ic_location_disabled_blue_24dp" />
+
+	<fragment
+		android:id="@+id/map"
+		android:name="com.google.android.gms.maps.SupportMapFragment"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		tools:context=".MapsActivity" />
+
+
+	<com.sasuke.covid19.CompoundTextView
+		android:id="@+id/maps_ctv_traces_count"
+		android:layout_width="80dp"
+		android:layout_height="80dp"
+		android:layout_gravity="top|end"
+		android:layout_marginTop="100dp"
+		android:layout_marginEnd="10dp"
+		android:background="@drawable/shape_rectangle"
+		android:textSize="@dimen/h6" />
+
+</FrameLayout>
+

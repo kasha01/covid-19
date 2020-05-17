@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+	android:width="24dp"
+	android:height="24dp"
+	android:viewportWidth="24.0"
+	android:viewportHeight="24.0">
+	<group
+		android:name="background"
+		android:scaleX="1"
+		android:scaleY="1">
+		<path
+			android:name="circle"
+			android:fillAlpha="0"
+			android:fillColor="@color/grey_300"
+			android:pathData="M12,12m-10,0a10,10 0,1 1,20 0a10,10 0,1 1,-20 0" />
+	</group>
+	<group
+		android:name="check"
+		android:pivotX="12"
+		android:pivotY="12"
+		android:rotation="0">
+		<path
+			android:name="tick"
+			android:pathData="M6,11 l0,0 l0,0"
+			android:strokeWidth="2"
+			android:strokeColor="#48f242" />
+	</group>
+</vector>
