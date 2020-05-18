@@ -1,1 +1,4 @@
 /build
+apikey.properties
+/app/src/debug/res/values/google_maps_api.xml
+/app/src/release/*
