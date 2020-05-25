@@ -560,11 +560,11 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 
 			final String userDocId = getStringPreference(Constant.USER_DOC_ID_PREF_KEY, "");
 
-			final float radius = Math.max(MINIMUM_RADIUS_THRESHOLD_KM, radiusKm);
+			final float queryRadiusKm = Math.max(MINIMUM_RADIUS_THRESHOLD_KM, radiusKm);
 
 			CollectionReference databaseReference = db.collection(Constant.LocationsTable.TABLE_NAME);
 			final GeoFirestore geoFire = new GeoFirestore(databaseReference);
-			GeoQuery geoQuery = geoFire.queryAtLocation(new GeoPoint(location.getLatitude(), location.getLongitude()), radius);
+			GeoQuery geoQuery = geoFire.queryAtLocation(new GeoPoint(location.getLatitude(), location.getLongitude()), queryRadiusKm);
 			geoQuery.addGeoQueryDataEventListener(new GeoQueryDataEventListener() {
 				@Override
 				public void onDocumentEntered(DocumentSnapshot documentSnapshot, GeoPoint geoPoint) {
@@ -592,9 +592,9 @@ public class MapsActivity extends BaseActivity implements OnMapReadyCallback, Co
 
 				@Override
 				public void onGeoQueryReady() {
-					Log.d(TAG, "msg: on GeoQueryReady, tracesCount:" + traces[0] + ", radiusKm:" + radius +
+					Log.d(TAG, "msg: on GeoQueryReady, tracesCount:" + traces[0] + ", radiusKm:" + queryRadiusKm +
 							", longitude:" + location.getLongitude() + ", latitude:" + location.getLatitude());
-					updateUI(traces[0], location, radius);
+					updateUI(traces[0], location, radiusKm);
 				}
 
 				@Override
