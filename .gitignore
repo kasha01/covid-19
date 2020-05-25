@@ -16,4 +16,4 @@ apikey.properties
 /app/src/release/*
 /app/release/*
 /app/src/release/res/values/google_maps_api.xml
-/app/google-service.json
+/app/google-services.json
